@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Soul Lab 영상 제작기</title>
+<style>[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=DM+Serif+Display&family=Noto+Sans+KR:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* 레이아웃: 상단 고정 데크(재생 · 탭 · 가사 자막) / 탭 4개 — 만들기 · 편집 · 녹음 · 게임 */
+:root{
+  --bg:#130d0b; --bg2:#1a120f; --panel:#1f1612; --panel2:#2a1e18; --line:#3d2c23; --ink:#f4e7d7; --dim:#bba28c; --mute:#85705f;
+  --amber:#ffb547; --rose:#e8677a; --mint:#5fe0c8; --gold:#f2cf86;
+  --f-disp:"DM Serif Display","Gowun Batang",Georgia,serif; --f-body:"Noto Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  --f-lyr:"Gowun Batang","Noto Serif KR",serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;touch-action:manipulation}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));padding-block:0 30px;
+  background-image:radial-gradient(ellipse 70% 40% at 15% 0%,rgba(232,103,122,.10),transparent 70%),radial-gradient(ellipse 60% 40% at 90% 10%,rgba(255,181,71,.08),transparent 70%)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:#100a08}
+button,select,input,textarea{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--panel2);border-radius:9px;padding:8px 12px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap;-webkit-tap-highlight-color:transparent;color:var(--ink);text-decoration:none;text-align:center}
+.btn:hover{border-color:var(--amber)}
+.btn:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.gchip:focus-visible,.chip:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.btn.pri{background:linear-gradient(135deg,var(--rose),#c9576b 50%,var(--amber));border:0;color:#1a0e0a}
+.btn.on{border-color:var(--amber);color:var(--amber);background:rgba(255,181,71,.12)}
+.btn.rec.on{border-color:#ff4d4d;color:#fff;background:#c22b2b;animation:recp 1s infinite}
+@keyframes recp{50%{box-shadow:0 0 0 6px rgba(255,77,77,.2)}}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:4px 8px;font-size:12px;border-radius:7px}
+.btn.big{padding:14px 16px;font-size:16px;border-radius:12px;width:100%}
+.btn.round{width:60px;height:60px;border-radius:50%;font-size:22px;padding:0;flex:none}
+select,input[type=text],input[type=number],textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%;min-width:0}
+input[type=range]{accent-color:var(--amber);width:100%}
+label.f{display:grid;gap:4px;font-size:12px;color:var(--dim);font-weight:700;min-width:0}
+/* 데크 */
+.deck{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;margin-inline:calc(-1 * max(14px,env(safe-area-inset-left,0px)));padding:10px max(14px,env(safe-area-inset-left,0px)) 0;
+  background:linear-gradient(#24180f,#1a120d);border-bottom:1px solid #4a3426;box-shadow:0 6px 18px rgba(0,0,0,.4);display:flex;gap:8px 14px;align-items:center;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;line-height:1.05;margin-right:6px}
+.brand b{font-family:var(--f-disp);font-weight:400;font-size:26px;letter-spacing:.5px;color:var(--gold)}
+.brand b i{color:var(--rose)}
+.brand small{color:var(--mute);font-size:10.5px;letter-spacing:.08em}
+.tp{display:flex;gap:6px;align-items:center}
+.tp .btn{min-width:42px;font-size:15px;padding:7px 10px}
+.clock{font-family:var(--f-mono);background:#0c0806;border:1px solid #4a3426;border-radius:8px;padding:5px 10px;color:var(--amber);min-width:140px;text-align:center;box-shadow:inset 0 0 12px rgba(255,181,71,.12)}
+.clock b{font-size:18px;font-weight:600}.clock span{font-size:11px;color:var(--dim);display:block}
+.deck .sp{flex:1}
+.mini{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--dim);font-weight:700}
+.mini input[type=number]{width:64px;padding:5px 6px;font-family:var(--f-mono)}
+#vu{width:90px;height:26px;border-radius:5px;background:#0c0806;border:1px solid #4a3426}
+.apptabs{flex-basis:100%;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.apptabs button{flex:1;min-width:max-content;font:inherit;font-weight:800;font-size:14.5px;padding:10px 14px 9px;border:0;border-bottom:3px solid transparent;background:none;color:var(--dim);cursor:pointer;border-radius:10px 10px 0 0}
+.apptabs button:hover{color:var(--ink)}
+.apptabs button.on{color:var(--amber);border-bottom-color:var(--amber);background:rgba(255,181,71,.09)}
+.karaoke{font-family:var(--f-lyr);font-size:20px;text-align:center;color:var(--dim);flex-basis:100%;padding:4px 0 8px;line-height:1.35}
+.karaoke:empty{display:none}
+.karaoke em{font-style:normal;color:var(--amber);text-shadow:0 0 12px rgba(255,181,71,.5)}
+/* 공통 카드 */
+main{margin-top:14px}
+.page[hidden]{display:none!important}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px;min-width:0;grid-template-columns:minmax(0,1fr)}
+.card h2{margin:0;font-family:var(--f-disp);font-weight:400;font-size:22px;color:var(--gold);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.card h2 small{font-family:var(--f-body);font-size:12px;color:var(--mute)}
+.col{display:grid;gap:14px;min-width:0;grid-template-columns:minmax(0,1fr)}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.card .g2 .btn,.card .g3 .btn{white-space:normal}
+.note{font-size:12px;color:var(--mute);margin:0}
+.status{font-size:12.5px;color:var(--dim);background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:38px}
+.status b{color:var(--amber)}
+.busy::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--amber);margin-right:7px;animation:bz 1s infinite}
+@keyframes bz{50%{opacity:.25}}
+.vdes{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#1b1310}.vdes summary{cursor:pointer;font-weight:700;color:var(--dim);font-size:13px}
+.vdes[open]{display:grid;gap:10px}
+.vrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.vsl{display:grid;grid-template-columns:110px 1fr 44px;gap:6px;align-items:center;font-size:12px;color:var(--dim);margin:4px 0}.vsl b{font-family:var(--f-mono);font-size:11px;color:var(--ink);text-align:right}
+/* 모달 */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(10,6,4,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal[hidden]{display:none}
+.mbox{width:min(560px,100%);max-height:90vh;overflow:auto}
+.exp{display:grid;gap:8px}
+.exp button{text-align:left;display:grid;gap:2px;padding:12px 14px;white-space:normal}
+.exp button span{font-weight:400;font-size:12px;color:var(--dim)}
+footer{margin-top:22px;color:var(--mute);font-size:12px}
+@media (prefers-reduced-motion:reduce){.btn.rec.on,.busy::before{animation:none}}
+@media(max-width:640px){.brand small,#vu{display:none}.brand b{font-size:21px}.clock{min-width:112px}.clock b{font-size:16px}.lanes{grid-template-columns:110px minmax(0,1fr)}.deck{gap:6px 8px}.ed{height:260px}.apptabs button{font-size:13.5px;padding:9px 8px}.karaoke{font-size:17px}}
+
+/* 🎬 영상 */
+.ve{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:14px;align-items:start}
+@media(max-width:1000px){.ve{grid-template-columns:minmax(0,1fr)}}
+.ve-drop{display:grid;gap:8px;padding:56px 18px;border-radius:14px}.ve-drop b{font-size:22px;color:var(--ink)}.ve-drop small{color:var(--mute)}
+.ve-drop[hidden],.ve-view[hidden]{display:none}
+.ve-view{display:grid;gap:10px}
+.ve-cv{display:flex;justify-content:center;background:#000;border-radius:12px;overflow:hidden;padding:6px}
+#veCv{display:block;max-width:100%;max-height:min(68vh,760px);width:auto;height:auto;cursor:pointer;border-radius:6px}
+.ve-tp{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ve-tp .sp{flex:1}.ve-tp #vePlay{min-width:54px;font-size:17px}
+.ve-time{font-family:var(--f-mono);font-size:12.5px;color:var(--amber)}
+.ve-ratio{display:flex;gap:4px;flex-wrap:wrap}.ve-ratio .btn.on{border-color:var(--amber);color:var(--amber);background:rgba(255,181,71,.12)}
+#vePanWrap[hidden]{display:none}#vePanWrap input{width:160px}
+.ve-tl{width:100%;height:88px;display:block;border-radius:8px;border:1px solid var(--line);cursor:pointer;touch-action:none}
+.ve-opts{display:grid;gap:6px;font-size:13.5px}.ve-opts label{display:flex;gap:8px;align-items:center;cursor:pointer}.ve-opts input{width:18px;height:18px;accent-color:var(--amber)}
+.ve-styles{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.vst{display:grid;gap:2px;place-items:center;border:1px solid var(--line);background:#2b2b30;border-radius:10px;padding:8px 4px;cursor:pointer}
+.vst b{font-size:22px;font-weight:inherit;line-height:1.2}.vst small{font-family:var(--f-body);font-size:11px;color:#ccc;-webkit-text-stroke:0;text-shadow:none;font-weight:700}
+.vst.on{border-color:var(--amber);box-shadow:inset 0 0 0 2px var(--amber)}
+.ve-caps{display:grid;gap:5px;max-height:340px;overflow:auto;padding-right:4px}
+.vc{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:5px;align-items:center}.vc input{padding:6px 8px}
+.vc.now input{border-color:var(--amber);background:rgba(255,181,71,.1)}
+.ve-bar{height:8px;border-radius:5px;background:var(--bg2);overflow:hidden}.ve-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--rose),var(--amber));transition:width .2s}
+.ve-vid{position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1}
+.ve-outpv{width:100%;max-height:360px;border-radius:10px;background:#000}.ve-outpv[hidden]{display:none}
+.ve-themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
+.vth{display:grid;gap:2px;place-items:center;border:1px solid var(--line);background:linear-gradient(160deg,color-mix(in srgb,var(--c) 30%,#221814),#1a120f);border-radius:12px;padding:10px 4px;cursor:pointer;color:var(--ink);font:inherit}
+.vth b{font-size:24px;font-weight:400}.vth span{font-size:12px;font-weight:700}.vth.on{border-color:var(--amber);box-shadow:inset 0 0 0 2px var(--amber)}
+.f-l{font-size:12px;color:var(--dim);font-weight:700}
+.ve-stk{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}.vsk{font-size:24px;border:1px solid var(--line);background:var(--bg2);border-radius:10px;padding:6px 0;cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--bg2);border-radius:999px;padding:6px 13px;font-weight:700;font-size:13px;cursor:pointer;color:var(--ink);font-family:inherit}
+.chip.on{background:rgba(255,181,71,.16);color:#fff;box-shadow:inset 0 0 0 2px var(--amber)}
+
+.deck{padding-bottom:10px}.deck a.btn{font-size:13px}
+</style>
+</head>
+<body data-page="video">
+<header class="deck">
+  <div class="brand"><b>Soul <i>Lab</i></b><small>AI 영상 제작기 · 자막 · 컷 · 줌</small></div>
+  <span class="sp" style="flex:1"></span>
+  <a class="btn" id="veHome" href="../">🎵 음악 스튜디오</a>
+</header>
+<main>
+<!-- 🎬 영상 -->
+<section class="page" data-page="video">
+  <div class="ve">
+    <section class="card ve-main">
+      <div class="drop ve-drop" id="veDrop" tabindex="0" role="button"><b>🎬 내 영상 올리기</b><span>아이폰 사진 앱의 영상 · mp4 · mov — 누르거나 끌어다 놓기</span><small>AI가 말소리를 듣고 자막을 넣고, 말 없는 구간을 자르고, 강조할 때 화면을 확대합니다</small></div>
+      <input type="file" id="veFile" accept="video/*" hidden>
+      <div id="veView" class="ve-view" hidden>
+        <div class="ve-cv"><canvas id="veCv" width="1080" height="1920" aria-label="영상 미리보기 (누르면 재생)"></canvas></div>
+        <div class="ve-tp"><button class="btn pri" id="vePlay" type="button" aria-label="재생">▶</button><span class="ve-time" id="veTime">0:00.0 / 0:00.0</span><span class="sp"></span>
+          <div class="ve-ratio" id="veRatio" role="group" aria-label="화면 비율"><button class="btn sm" type="button" data-r="9:16">9:16 쇼츠</button><button class="btn sm" type="button" data-r="16:9">16:9 유튜브</button><button class="btn sm" type="button" data-r="1:1">1:1</button><button class="btn sm" type="button" data-r="orig">원본</button></div></div>
+        <label class="mini" id="vePanWrap">화면 위치 ← → <input type="range" id="vePan" min="-1" max="1" step="0.01" value="0"></label>
+        <canvas id="veTl" class="ve-tl" aria-label="타임라인 (누르면 이동)"></canvas>
+        <p class="note">초록 = 소리 · 어두운 칸 = 잘려 나갈 구간 · 노란 막대 = 자막 · 누르면 그 위치로 이동 · <button class="btn sm" id="veNew" type="button">다른 영상</button></p>
+      </div>
+      <video id="veVid" class="ve-vid" playsinline webkit-playsinline preload="auto"></video>
+    </section>
+    <div class="col">
+      <section class="card">
+        <h2>① 자동 편집 <small>자막 · 컷 · 줌을 한 번에</small></h2>
+        <div class="ve-opts"><label><input type="checkbox" id="veOpt_auto"> ⚡ 영상을 올리면 바로 자동 편집</label><label><input type="checkbox" id="veOpt_deco"> 🎨 자동 꾸미기 (테마·음악·제목)</label><label><input type="checkbox" id="veOpt_cut"> ✂ 말 없는 구간 자르기 (점프컷)</label><label><input type="checkbox" id="veOpt_filler"> 🙊 '음·어' 같은 군말 자르기</label><label><input type="checkbox" id="veOpt_zoom"> 🔍 자동 줌 · 강조</label><label><input type="checkbox" id="veOpt_emoji"> 😂 이모지 자동</label></div>
+        <div class="g2"><label class="f">자막 인식 <select id="veModel"><option value="fast">빠름 (약 76MB · 추천)</option><option value="best">정확 (약 250MB · 느림)</option></select></label>
+          <label class="f">컷 템포 <select id="veMinSil"><option value=".35">빠르게 (쇼츠)</option><option value=".55">보통</option><option value=".9">여유 있게 (브이로그)</option></select></label></div>
+        <label class="note"><input type="checkbox" id="veGpu"> ⚡ GPU 가속 (실험 · 아이폰은 꺼 두는 걸 권장)</label>
+        <button class="btn pri big" id="veAuto" type="button" disabled>✨ 자동 편집 시작</button>
+        <div class="status" id="veStatus">먼저 영상을 올려 주세요. (처음 한 번은 AI 모델을 받느라 시간이 걸립니다)</div>
+      </section>
+      <section class="card">
+        <h2>② 꾸미기 <small>테마 한 번에 · 필터 · 배경음악 · 제목</small></h2>
+        <div class="ve-themes" id="veThemes"></div>
+        <div class="status" id="veDecoSt"></div>
+        <div class="f-l">필터</div><div class="chips" id="veFilters"></div>
+        <div class="g2"><label class="f">배경음악 <select id="veBgm"></select></label><label class="f">음악 볼륨 <input type="range" id="veBgmVol" min="0" max="1.5" step="0.01" value=".7"></label></div>
+        <input type="file" id="veBgmIn" accept="audio/*" hidden>
+        <div class="g2"><label class="f">원본 소리 <input type="range" id="veOrigVol" min="0" max="1.5" step="0.01" value="1"></label><label class="f">장면 전환 <select id="veTrans"><option value="none">없음</option><option value="flash">⚡ 플래시</option><option value="fade">🌑 페이드</option><option value="zoom">🔍 줌 인</option></select></label></div>
+        <label class="f">제목 (첫 화면) <input type="text" id="veTitle" maxlength="40" placeholder="예: 우리 집 막내 먹방 🐶"></label>
+        <div class="g2"><label class="note"><input type="checkbox" id="veIntro"> 첫 화면에 제목 넣기</label><label class="note"><input type="checkbox" id="veBeat"> 음악 박자에 맞춰 줌</label></div>
+      </section>
+      <section class="card">
+        <h2>③ 자막 스타일</h2>
+        <div class="ve-styles" id="veStyles"></div>
+        <div class="g2"><label class="f">크기 <input type="range" id="veSize" min="0.6" max="1.6" step="0.01" value="1"></label><label class="f">높이 (위 ↕ 아래) <input type="range" id="veY" min="0.12" max="0.92" step="0.01" value="0.72"></label></div>
+        <label class="f">한 번에 보일 자막 <select id="veGroup"><option value="auto">자동 (세로 = 짧게 · 가로 = 한 줄)</option><option value="word">한두 단어씩 (빠른 쇼츠)</option><option value="short">짧게 (3단어 정도)</option><option value="line">한 줄</option><option value="two">두 줄까지</option></select></label>
+      </section>
+      <section class="card">
+        <h2>④ 자막 · 스티커 <small id="veCapN"></small></h2>
+        <div class="ve-caps" id="veCaps"></div>
+        <button class="btn sm" id="veAddCap" type="button">＋ 지금 위치에 자막 추가</button>
+        <div class="f-l">스티커 — 누르면 지금 위치에 2.5초 붙어요</div><div class="ve-stk" id="veStickers"></div><div class="chips" id="veStkList"></div>
+      </section>
+      <section class="card">
+        <h2>⑤ 영상 저장</h2>
+        <div class="g2"><label class="f">화질 <select id="veQ"><option value="720">720p (가볍게 · 아이폰 추천)</option><option value="1080">1080p (선명 · 무거움)</option></select></label><button class="btn" id="veSrt" type="button">⇩ 자막 파일 (.srt)</button></div>
+        <button class="btn pri big" id="veExport" type="button" disabled>🎬 영상 만들기</button>
+        <div class="ve-bar"><i id="veBar"></i></div>
+        <div class="status" id="veXs">편집된 길이만큼 재생하면서 녹화합니다 — 그동안 화면을 켜 두세요.</div>
+        <video id="veOutPv" class="ve-outpv" controls playsinline hidden></video>
+        <div class="g2" id="veOut" hidden><a class="btn pri" id="veDl" download>⇩ 내려받기</a><button class="btn" id="veShare" type="button">📲 사진 앱에 저장 · 공유</button></div>
+      </section>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer>영상은 이 기기 밖으로 올라가지 않습니다 — 음성 인식·편집·저장 모두 브라우저 안에서 처리합니다. 음성 인식: OpenAI Whisper (onnx-community 변환 모델).</footer>
+<script>
+'use strict';
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const DPR = () => Math.min(2, window.devicePixelRatio || 1);
+const curPage = () => 'video';
+// video/index.html 이든 video.html 이든 음악 스튜디오로 돌아가는 주소를 맞춤
+$('#veHome').href = /\/video\/(index\.html)?$/.test(location.pathname) ? '../' : './';
+// 오디오 엔진 (영상 제작기 전용 · 최소)
+const Eng = { ctx: null, playing: false,
+  ensure() { try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) { }
+    if (!this.ctx || this.ctx.state === 'closed') this.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'playback' });
+    if (this.ctx.state !== 'running') { try { this.ctx.resume(); } catch (e) { } } return this.ctx; } };
+const stopPlay = () => { };
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Eng.ctx && Eng.ctx.state !== 'running') try { Eng.ctx.resume(); } catch (e) { } });
+addEventListener('keydown', e => { if (e.target.closest('input,textarea,select')) return; if (e.code === 'Space') { e.preventDefault(); veToggle(); } });
+// =================== 영상 제작기 : 내 영상 → AI 자동 자막(Whisper) · 점프컷 · 자동 줌 → mp4 ===================
+const VE_ASR_SRC = `
+let asr = null, cur = '', dev = '', loading = null;
+const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2';
+async function load(model, force) {
+  if (asr && cur === model) return;
+  if (loading) { await loading; if (asr && cur === model) return; }
+  loading = (async () => {
+    const { pipeline, env } = await import(CDN); env.allowLocalModels = false;
+    const files = {}, pc = p => { if (p.status === 'progress' && p.total) { files[p.file] = [p.loaded, p.total]; let a = 0, b = 0; for (const k in files) { a += files[k][0]; b += files[k][1]; } postMessage({ type: 'dl', pct: Math.min(99, Math.round(a / b * 100)), mb: Math.round(b / 1e6) }); } };
+    asr = null;
+    // 그래픽 칩(WebGPU)이 있으면 그쪽으로 — CPU 한 코어보다 몇 배 빠름
+    let f16 = false, gpu = false;
+    if (force !== 'wasm') try { const ad = self.navigator && navigator.gpu && await navigator.gpu.requestAdapter(); if (ad) { gpu = true; f16 = ad.features.has('shader-f16'); } } catch (e) { }
+    if (gpu && (f16 || force === 'webgpu')) try {
+      asr = await pipeline('automatic-speech-recognition', model, { device: 'webgpu', dtype: f16 ? { encoder_model: 'fp16', decoder_model_merged: 'q4f16' } : { encoder_model: 'fp32', decoder_model_merged: 'q4' }, progress_callback: pc });
+      const t = new Float32Array(16000); for (let i = 0; i < t.length; i++) t[i] = Math.sin(i / 8) * .1;
+      const ok = await Promise.race([asr(t, { language: 'korean', task: 'transcribe', return_timestamps: 'word' }).then(() => true), new Promise(r => setTimeout(() => r(false), 25000))]);
+      if (!ok) throw new Error('gpu slow'); dev = 'webgpu';
+    } catch (e) { asr = null; }
+    if (!asr) { asr = await pipeline('automatic-speech-recognition', model, { device: 'wasm', dtype: { encoder_model: 'q8', decoder_model_merged: 'q8' }, progress_callback: pc }); dev = 'wasm'; }
+    cur = model; postMessage({ type: 'ready', dev });
+  })();
+  try { await loading; } finally { loading = null; }
+}
+self.onmessage = async e => { const d = e.data;
+  try {
+    await load(d.model, d.force);
+    if (d.type === 'run') { const o = { language: 'korean', task: 'transcribe', return_timestamps: 'word', chunk_length_s: 30, stride_length_s: 5 }; let out;
+      try { out = await asr(d.audio, o); } catch (er) { if (dev !== 'webgpu') throw er; asr = null; cur = ''; await load(d.model, 'wasm'); out = await asr(d.audio, o); }
+      postMessage({ type: 'done', id: d.id, chunks: out.chunks || [] }); }
+  } catch (err) { postMessage({ type: 'err', id: d.id, msg: String(err && err.message || err) }); } };
+`;
+const VE_MODELS = { fast: 'onnx-community/whisper-base_timestamped', best: 'onnx-community/whisper-small_timestamped' };
+const VE = { file: null, url: null, dur: 0, audio: null, db: null, thr: -45, words: [], caps: [], keep: null, cuts: [], emphW: [], worker: null, srcNode: null, exp: null, out: null, capIdx: -2,
+  isIOS: (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)),
+  set: { ratio: '9:16', q: (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) ? '720' : '1080', gpu: !(/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)), pan: 0, style: 'pop', size: 1, y: .72, group: 'auto', minSil: '.55', model: 'fast', opt: { cut: true, filler: true, zoom: true, emoji: true, auto: true } } };
+try { const s = JSON.parse(localStorage.getItem('soullab:ve') || 'null'); if (s) { const q0 = VE.set.q, g0 = VE.set.gpu; Object.assign(VE.set, s, { opt: Object.assign(VE.set.opt, s.opt || {}) }); if (!s.v2) { VE.set.q = q0; VE.set.gpu = g0; } } } catch (e) { }
+VE.set.v2 = 1;
+const veSave = () => { try { localStorage.setItem('soullab:ve', JSON.stringify(VE.set)); } catch (e) { } };
+const veSt = (h, busy) => { const el = $('#veStatus'); el.innerHTML = h; el.classList.toggle('busy', !!busy); };
+const veXs = (h, busy) => { const el = $('#veXs'); el.innerHTML = h; el.classList.toggle('busy', !!busy); };
+const vfmt = s => { s = Math.max(0, s || 0); const m = Math.floor(s / 60); return `${m}:${(s - m * 60).toFixed(1).padStart(4, '0')}`; };
+// 자막 스타일 (요즘 쇼츠·유튜브·예능에서 많이 쓰는 형태)
+const VES = {
+  pop: { ko: '쇼츠 팝', font: '"Black Han Sans","Noto Sans KR",sans-serif', w: 400, size: .085, fill: '#ffffff', stroke: '#000000', sw: .17, hi: '#FFE14D', pop: 1, hiScale: 1.1 },
+  box: { ko: '하이라이트 박스', font: '"Noto Sans KR",sans-serif', w: 900, size: .072, fill: '#ffffff', stroke: '#000000', sw: .1, box: '#7C4DFF', pop: 1 },
+  variety: { ko: '예능 자막', font: '"Jua","Do Hyeon",sans-serif', w: 400, size: .092, fill: '#FFE14D', stroke: '#3a1c00', sw: .13, outer: '#ffffff', tilt: -.045, pop: 2, hi: '#FF6FB5', hiScale: 1.12 },
+  karaoke: { ko: '노래방', font: '"Do Hyeon","Noto Sans KR",sans-serif', w: 400, size: .08, fill: '#ffffff', stroke: '#0a2a6b', sw: .14, wipe: '#4DE1FF' },
+  neon: { ko: '네온', font: '"Black Han Sans","Noto Sans KR",sans-serif', w: 400, size: .08, fill: '#ffffff', glow: '#ff3df2', hi: '#6ff8ff', pop: 1 },
+  minimal: { ko: '브이로그', font: '"Noto Sans KR",sans-serif', w: 700, size: .05, fill: '#ffffff', shadow: 1, fade: 1 },
+  type: { ko: '타자기', font: '"Noto Sans KR",sans-serif', w: 700, size: .052, fill: '#ffffff', bg: 'rgba(0,0,0,.62)', type: 1 },
+};
+const VE_EMOJI = [[/사랑|좋아해|하트|설레/, '❤️'], [/웃기|웃겨|ㅋㅋ|재밌|재미있/, '😂'], [/대박|최고|미쳤|레전드/, '🔥'], [/진짜|정말|헐|놀라/, '😮'], [/맛있|맛집|먹어|먹을|배고/, '😋'], [/돈|가격|만원|비싸|싸다/, '💰'],
+  [/여행|비행기|공항|바다/, '✈️'], [/음악|노래|춤/, '🎵'], [/감사|고마워|고맙/, '🙏'], [/슬프|눈물|울었/, '😢'], [/화나|짜증|열받/, '😤'], [/안녕|반가워/, '👋'], [/아이폰|카메라|영상|사진/, '📱'], [/운동|헬스|다이어트/, '💪'],
+  [/커피|카페/, '☕'], [/생각|고민|궁금/, '🤔'], [/축하|생일|파티/, '🎉'], [/시작|오늘은|드디어/, '✨'], [/잠|졸려|피곤/, '😴'], [/집|방/, '🏠']];
+const VE_EMPH = /대박|진짜|정말|최고|완전|미쳤|레전드|헐|와우|[!?]|[0-9]/;
+const VE_FILL = /^(음+|으음+|어+|엄+|에+|아+|흠+|그+으*|저+어*)[.,…~]*$/;
+// ---------- 불러오기 ----------
+function veSrc() { if (!VE.srcNode) { const ctx = Eng.ensure(); VE.srcNode = ctx.createMediaElementSource($('#veVid')); VE.spk = ctx.createGain(); VE.orig = ctx.createGain(); VE.srcNode.connect(VE.orig).connect(VE.spk).connect(ctx.destination); } else Eng.ensure(); return VE.srcNode; }
+const once = (el, ev) => new Promise(r => el.addEventListener(ev, r, { once: true }));
+function seekTo(v, t) { return new Promise(res => { if (Math.abs(v.currentTime - t) < .005 && v.readyState >= 2) return res(); let done = false; const fin = () => { if (!done) { done = true; v.removeEventListener('seeked', fin); res(); } }; v.addEventListener('seeked', fin); setTimeout(fin, 3000); v.currentTime = t; }); }
+async function veLoad(f) {
+  if (!f) return; if (VE.exp) return; const v = $('#veVid'); v.pause();
+  if (VE.url) URL.revokeObjectURL(VE.url); VE.file = f; VE.url = URL.createObjectURL(f);
+  veBgmStop(); Object.assign(VE, { stickers: [], userTheme: false, bgmKey: '', talk: true, audPath: '', dur: 0, audio: null, db: null, words: [], caps: [], keep: null, cuts: [], emphW: [], out: null, capIdx: -2 }); $('#veOut').hidden = true;
+  veSt('영상 여는 중…', true); Eng.ensure(); veSrc();
+  v.src = VE.url; v.load(); v.muted = false; VE.spk.gain.value = 0; try { const p0 = v.play(); if (p0 && p0.then) p0.then(() => { v.pause(); VE.spk.gain.value = 1; }, () => { VE.spk.gain.value = 1; }); } catch (e) { VE.spk.gain.value = 1; }
+  if (!VE.ready && !VE.isIOS) veWarm();
+  try { await Promise.race([once(v, 'loadedmetadata'), new Promise((_, rej) => { v.onerror = () => rej(new Error('x')); setTimeout(() => rej(new Error('t')), 20000); })]); }
+  catch (e) { veSt('이 영상은 이 브라우저에서 열 수 없습니다. (PC 크롬에서 아이폰 HEVC 영상이 안 열리면 아이폰 설정 → 카메라 → 포맷 → <b>높은 호환성</b>으로 찍거나, 아이폰 사파리에서 열어 주세요.)'); return; }
+  VE.dur = v.duration; if (!isFinite(VE.dur)) { v.currentTime = 1e9; await once(v, 'durationchange'); VE.dur = v.duration; }
+  VE.set.ratio = v.videoHeight > v.videoWidth ? '9:16' : '16:9'; VE.set.pan = 0; $('#vePan').value = 0;
+  $('#veDrop').hidden = true; $('#veView').hidden = false; $('#veAuto').disabled = false; $('#veExport').disabled = false;
+  veSize(); await seekTo(v, .01); veDraw(); veTl(); veCapsUI();
+  veSt(`영상을 불러왔습니다 (${vfmt(VE.dur)} · ${v.videoWidth}×${v.videoHeight}). <b>✨ 자동 편집 시작</b>을 누르세요.`);
+  VE.audioP = veExtract(f); VE.audioP.catch(() => { });
+  if (VE.set.opt.auto) veAuto();
+}
+// 영상 파일에서 '소리 부분만' 조금씩 읽어 작은 .m4a로 만듦 (아이폰 4K 영상 전체를 메모리에 올리지 않음)
+async function veAudioOnly(f) {
+  const rd = async (o, n) => new Uint8Array(await f.slice(o, o + n).arrayBuffer());
+  const u32 = (b, i) => ((b[i] << 24) >>> 0) + (b[i + 1] << 16) + (b[i + 2] << 8) + b[i + 3];
+  const typ = (b, i) => String.fromCharCode(b[i], b[i + 1], b[i + 2], b[i + 3]);
+  let off = 0, moov = null;
+  while (off + 8 <= f.size) { const h = await rd(off, 16); let sz = u32(h, 0); const t = typ(h, 4);
+    if (sz === 1) sz = u32(h, 8) * 4294967296 + u32(h, 12); else if (sz === 0) sz = f.size - off;
+    if (t === 'moov') { if (sz > 200e6) return null; moov = await rd(off, sz); break; } if (sz < 8) return null; off += sz; }
+  if (!moov) return null;
+  const kids = (s, e) => { const out = []; let i = s; while (i + 8 <= e) { let sz = u32(moov, i), hl = 8; const t = typ(moov, i + 4); if (sz === 1) { sz = u32(moov, i + 8) * 4294967296 + u32(moov, i + 12); hl = 16; } else if (sz === 0) sz = e - i; if (sz < 8 || i + sz > e) break; out.push({ t, s: i + hl, e: i + sz, at: i }); i += sz; } return out; };
+  const find = (n, path) => { for (const p of path) { n = kids(n.s, n.e).find(x => x.t === p); if (!n) return null; } return n; };
+  for (const trak of kids(8, moov.length).filter(x => x.t === 'trak')) {
+    const hd = find(trak, ['mdia', 'hdlr']); if (!hd || typ(moov, hd.s + 8) !== 'soun') continue;
+    const mdhd = find(trak, ['mdia', 'mdhd']), stbl = find(trak, ['mdia', 'minf', 'stbl']); if (!mdhd || !stbl) continue;
+    const ts = moov[mdhd.s] === 1 ? u32(moov, mdhd.s + 20) : u32(moov, mdhd.s + 12);
+    let skip = 0; const elst = find(trak, ['edts', 'elst']); if (elst && u32(moov, elst.s + 4) > 0) { const v1 = moov[elst.s] === 1, mt = v1 ? u32(moov, elst.s + 16) * 4294967296 + u32(moov, elst.s + 20) : u32(moov, elst.s + 12); if (mt > 0 && mt < 0x7fffffff && mt / ts < 1) skip = mt / ts; }
+    const bx = n => kids(stbl.s, stbl.e).find(x => x.t === n), stsd = bx('stsd'), stts = bx('stts'), stsc = bx('stsc'), stsz = bx('stsz'), stco = bx('stco'), co64 = bx('co64');
+    if (!stsd || !stts || !stsc || !stsz || !(stco || co64)) continue;
+    const ent = stsd.s + 8, entEnd = ent + u32(moov, ent); if (typ(moov, ent + 4) !== 'mp4a') return null; // AAC만
+    let esds = null; for (let i = ent + 36; i < entEnd - 8; i++) if (typ(moov, i + 4) === 'esds') { esds = moov.slice(i, i + u32(moov, i)); break; }
+    if (!esds) return null;
+    const qv = (moov[ent + 16] << 8) | moov[ent + 17], ch = qv === 2 ? 2 : Math.max(1, (moov[ent + 24] << 8) | moov[ent + 25]);
+    const ssz = u32(moov, stsz.s + 4), cnt = u32(moov, stsz.s + 8), sizes = new Uint32Array(cnt); for (let i = 0; i < cnt; i++) sizes[i] = ssz || u32(moov, stsz.s + 12 + i * 4);
+    const offs = []; if (stco) { const n = u32(moov, stco.s + 4); for (let i = 0; i < n; i++) offs.push(u32(moov, stco.s + 8 + i * 4)); } else { const n = u32(moov, co64.s + 4); for (let i = 0; i < n; i++) offs.push(u32(moov, co64.s + 8 + i * 8) * 4294967296 + u32(moov, co64.s + 12 + i * 8)); }
+    const scN = u32(moov, stsc.s + 4), spc = new Uint32Array(offs.length);
+    for (let k = 0; k < scN; k++) { const a = u32(moov, stsc.s + 8 + k * 12) - 1, b = k + 1 < scN ? u32(moov, stsc.s + 8 + (k + 1) * 12) - 1 : offs.length, n = u32(moov, stsc.s + 12 + k * 12); for (let c = a; c < b && c < offs.length; c++) spc[c] = n; }
+    let tot = 0; for (const s of sizes) tot += s; if (tot > 150e6) return null;
+    const data = new Uint8Array(tot); let si = 0, w = 0;
+    for (let c = 0; c < offs.length && si < cnt; c++) { let n = 0; for (let k = 0; k < spc[c] && si + k < cnt; k++) n += sizes[si + k]; if (n) { data.set(await rd(offs[c], n), w); w += n; } si += spc[c]; }
+    let dur = 0; { const n = u32(moov, stts.s + 4); for (let i = 0; i < n; i++) dur += u32(moov, stts.s + 8 + i * 8) * u32(moov, stts.s + 12 + i * 8); }
+    // 최소 .m4a 만들기
+    const be = (v, n) => { const a = new Uint8Array(n); for (let i = n - 1; i >= 0; i--) { a[i] = v & 255; v = Math.floor(v / 256); } return a; }, str = s => new Uint8Array([...s].map(c => c.charCodeAt(0)));
+    const cat = (...p) => { const o = new Uint8Array(p.reduce((a, x) => a + x.length, 0)); let i = 0; for (const x of p) { o.set(x, i); i += x.length; } return o; };
+    const box = (t, ...p) => { const b = cat(...p); return cat(be(b.length + 8, 4), str(t), b); }, full = (t, v, fl, ...p) => box(t, be(v, 1), be(fl, 3), ...p);
+    const mtx = cat(be(0x10000, 4), be(0, 4), be(0, 4), be(0, 4), be(0x10000, 4), be(0, 4), be(0, 4), be(0, 4), be(0x40000000, 4));
+    const sizesB = new Uint8Array(cnt * 4); for (let i = 0; i < cnt; i++) sizesB.set(be(sizes[i], 4), i * 4);
+    const mk = co => { const stbl2 = box('stbl',
+        full('stsd', 0, 0, be(1, 4), box('mp4a', new Uint8Array(6), be(1, 2), new Uint8Array(8), be(ch, 2), be(16, 2), be(0, 4), be(Math.min(65535, ts) * 65536, 4), esds)),
+        moov.slice(stts.at, stts.e), full('stsc', 0, 0, be(1, 4), be(1, 4), be(cnt, 4), be(1, 4)), full('stsz', 0, 0, be(0, 4), be(cnt, 4), sizesB), full('stco', 0, 0, be(1, 4), be(co, 4)));
+      return box('moov', full('mvhd', 0, 0, be(0, 4), be(0, 4), be(ts, 4), be(dur, 4), be(0x10000, 4), be(0x100, 2), new Uint8Array(10), mtx, new Uint8Array(24), be(2, 4)),
+        box('trak', full('tkhd', 0, 7, be(0, 4), be(0, 4), be(1, 4), be(0, 4), be(dur, 4), new Uint8Array(8), be(0, 2), be(0, 2), be(0x100, 2), be(0, 2), mtx, be(0, 4), be(0, 4)),
+          box('mdia', full('mdhd', 0, 0, be(0, 4), be(0, 4), be(ts, 4), be(dur, 4), be(0x55c4, 2), be(0, 2)), full('hdlr', 0, 0, be(0, 4), str('soun'), new Uint8Array(12), str('SoundHandler\0')),
+            box('minf', full('smhd', 0, 0, be(0, 4)), box('dinf', full('dref', 0, 0, be(1, 4), full('url ', 0, 1))), stbl2)))); };
+    const ftyp = box('ftyp', str('M4A '), be(0, 4), str('M4A mp42isom'));
+    const head = ftyp.length + mk(0).length + 8, mdat = cat(be(tot + 8, 4), str('mdat'));
+    return { ab: cat(ftyp, mk(head), mdat, data).buffer, skip };
+  }
+  return null;
+}
+// 오디오 추출 → 16kHz 모노 (음성 인식 · 무음 검출용)
+async function veExtract(f) {
+  const ctx = Eng.ensure(); let buf = null;
+  const dec = ab => new Promise((res, rej) => { const p = ctx.decodeAudioData(ab, res, rej); if (p && p.catch) p.catch(rej); });
+  // ① 소리 부분만 골라 읽기 (메모리 적게) → ② 작은 파일만 통째로 → ③ 재생하며 받기
+  try { const m = await veAudioOnly(f); if (m) { VE.audPath = 'm4a'; buf = await dec(m.ab); VE.audSkip = m.skip; } } catch (e) { console.warn('m4a', e); buf = null; }
+  VE.audSkip = VE.audSkip || 0; if (!buf) VE.audSkip = 0;
+  if (!buf && f.size < 150e6) try { VE.audPath = 'full'; buf = await dec(await f.arrayBuffer()); } catch (e) { buf = null; }
+  if (!buf) VE.audPath = 'capture';
+  if (!buf) buf = await veCapture();
+  if (!buf) throw new Error('소리를 읽지 못했습니다');
+  const n = Math.max(1, Math.ceil(buf.duration * 16000)), oc = new OfflineAudioContext(1, n, 16000), s = oc.createBufferSource(); s.buffer = buf; s.connect(oc.destination); s.start(0, VE.audPath === 'm4a' ? VE.audSkip || 0 : 0);
+  const a = (await oc.startRendering()).getChannelData(0); VE.audio = a; veEnv(); veTl(); return a;
+}
+// 파일 해석이 안 되는 경우: 영상을 4배속으로 재생하며 소리를 받아 냄 (스피커는 무음)
+async function veCapture() {
+  const v = $('#veVid'), ctx = Eng.ensure(), src = veSrc(), N = 2048, sp = ctx.createScriptProcessor(N, 1, 1), mute = ctx.createGain(), rate = VE.capRate || 1, R0 = ctx.sampleRate / rate; mute.gain.value = 0;
+  const out = new Float32Array(Math.ceil((VE.dur + 1) * R0)); let got = 0;
+  veSt('영상 소리를 읽는 중…', true);
+  src.connect(sp); sp.connect(mute).connect(ctx.destination); VE.spk.gain.value = 0;
+  // 받은 소리 조각을 '영상 시계' 위치에 놓음 → 길이가 어긋나지 않음
+  sp.onaudioprocess = e => { if (v.paused || v.seeking) return; const d = e.inputBuffer.getChannelData(0), end = v.currentTime - N / ctx.sampleRate * rate * .5, o = Math.round(end * R0) - d.length; if (o + d.length <= 0) return; for (let k = Math.max(0, -o); k < d.length && o + k < out.length; k++) out[o + k] = d[k]; got += d.length; };
+  const pp = ['preservesPitch', 'webkitPreservesPitch', 'mozPreservesPitch'];
+  try { for (const k of pp) if (k in v) v[k] = false; await seekTo(v, 0); v.playbackRate = rate; await v.play();
+    await new Promise(r => { const t = setInterval(() => { if (v.ended || v.paused) { clearInterval(t); r(); } else veSt(`영상 소리를 빠르게 읽는 중… <b>${Math.round(v.currentTime / VE.dur * 100)}%</b>`, true); }, 300); }); }
+  catch (e) { }
+  v.pause(); v.playbackRate = 1; for (const k of pp) if (k in v) v[k] = true; try { src.disconnect(sp); } catch (e) { } sp.disconnect(); VE.spk.gain.value = 1;
+  if (got < R0 * .5) return null;
+  const b = ctx.createBuffer(1, Math.ceil(VE.dur * R0), R0); b.copyToChannel(out.subarray(0, b.length), 0); return b;
+}
+// 20ms 단위 음량(dB) + 말소리 기준선
+function veEnv() {
+  const a = VE.audio, F = 320, n = Math.floor(a.length / F), db = new Float32Array(n);
+  for (let i = 0; i < n; i++) { let e = 0; for (let j = i * F; j < (i + 1) * F; j++) e += a[j] * a[j]; db[i] = 10 * Math.log10(e / F + 1e-10); }
+  const s = Array.from(db).sort((x, y) => x - y), floor = s[Math.floor(n * .1)] || -60, peak = s[Math.floor(n * .98)] || -10;
+  VE.db = db; VE.thr = Math.max(floor + 6, floor + (peak - floor) * .32);
+}
+const veVoiced = (s, e) => { if (!VE.db) return 1; const a = Math.max(0, Math.floor(s / .02)), b = Math.min(VE.db.length, Math.ceil(e / .02)); if (b <= a) return 0; let k = 0; for (let i = a; i < b; i++) if (VE.db[i] > VE.thr) k++; return k / (b - a); };
+// ---------- 음성 인식 ----------
+function veWorker() {
+  if (VE.worker) return VE.worker;
+  const w = VE.worker = new Worker(URL.createObjectURL(new Blob([VE_ASR_SRC], { type: 'text/javascript' })), { type: 'module' }); VE.wait = new Map(); VE.wseq = 0;
+  w.onerror = e => { VE.worker = null; for (const [, p] of VE.wait) p.rej(new Error((e && e.message) || '음성 인식 엔진을 불러오지 못했습니다')); VE.wait.clear(); };
+  w.onmessage = e => { const d = e.data;
+    if (d.type === 'dl') { VE.dl = d; if (VE.busy) veSt(`AI 음성 인식 모델 받는 중… <b>${d.pct}%</b> (처음 한 번만 · 약 ${d.mb}MB)`, true); }
+    else if (d.type === 'ready') { VE.dev = d.dev; VE.ready = true; }
+    else { const p = VE.wait.get(d.id); if (!p) return; VE.wait.delete(d.id); d.type === 'done' ? p.res(d.chunks) : p.rej(new Error(d.msg)); } };
+  return w;
+}
+const veForce = () => VE.force || (VE.set.gpu ? '' : 'wasm');
+function veWarm() { try { VE.ready = false; veWorker().postMessage({ type: 'load', model: VE_MODELS[VE.set.model] || VE_MODELS.fast, force: veForce() }); } catch (e) { } }
+// AI 모델을 메모리에서 내림 (다음엔 브라우저 저장소에서 빠르게 다시 불러옴)
+function veKill() { if (VE.worker) { try { VE.worker.terminate(); } catch (e) { } VE.worker = null; VE.ready = false; if (VE.wait) { for (const [, p] of VE.wait) p.rej(new Error('중단')); VE.wait.clear(); } } }
+function veASR(audio, model) { return new Promise((res, rej) => { const w = veWorker(), id = ++VE.wseq; VE.wait.set(id, { res, rej }); w.postMessage({ type: 'run', id, model, audio, force: veForce() }, [audio.buffer]); }); }
+// 무음 지점에서 25초 이하 조각으로 나눔 (말소리 없는 조각은 건너뜀)
+function veChunks() {
+  const db = VE.db, F = .02, maxL = Math.round(25 / F), minL = Math.round(8 / F), out = []; let a = 0;
+  while (a < db.length) { let b = Math.min(db.length, a + maxL);
+    if (b < db.length) { let best = b, bv = 1e9; for (let i = a + minL; i < b; i++) { let m = 0; for (let k = -5; k <= 5; k++) m += db[Math.min(db.length - 1, Math.max(0, i + k))]; if (m < bv) { bv = m; best = i; } } b = best; }
+    let vo = 0; for (let i = a; i < b; i++) if (db[i] > VE.thr) vo++;
+    if (vo > 8) out.push([a * F, b * F]); a = b; }
+  return out;
+}
+function veWords(chunks) {
+  const out = [];
+  for (const c of chunks) { const w = String(c.text || '').trim(); if (!w) continue; let [s, e] = c.timestamp || []; if (s == null) continue; if (e == null || e <= s) e = s + .3; out.push({ w, s, e }); }
+  for (let i = 0; i < out.length - 1; i++) if (out[i].e > out[i + 1].s) out[i].e = Math.max(out[i].s + .05, out[i + 1].s);
+  return out.filter(x => veVoiced(x.s, x.e) > .15 || x.e - x.s < .2); // 조용한 구간에 생기는 가짜 자막(환각) 제거
+}
+// ---------- 자동 편집: 컷 · 자막 · 줌 ----------
+function veBuild() {
+  const O = VE.set.opt, dur = VE.dur, cuts = [], pad = .1, minSil = +VE.set.minSil;
+  const fill = w => O.filler && VE_FILL.test(w.w);
+  const talk = VE.talk !== false;
+  if (O.cut && VE.db && talk) {
+    const protect = new Uint8Array(VE.db.length); for (const w of VE.words) if (!fill(w)) for (let i = Math.floor(w.s / .02); i < Math.min(VE.db.length, Math.ceil(w.e / .02)); i++) protect[i] = 1;
+    let st = -1;
+    for (let i = 0; i <= VE.db.length; i++) { const sil = i < VE.db.length && VE.db[i] < VE.thr && !protect[i];
+      if (sil && st < 0) st = i;
+      if (!sil && st >= 0) { const a = st * .02, b = Math.min(dur, i * .02); if (b - a >= minSil) cuts.push([a === 0 ? 0 : a + pad, i >= VE.db.length ? dur : b - pad]); st = -1; } }
+  }
+  if (O.filler) for (const w of VE.words) if (fill(w)) cuts.push([w.s - .03, w.e + .03]);
+  if (O.filler && talk && VE.words.length && VE.db) { // 글자로 받아 적히지 않은 짧은 소리 덩어리 = '음…' 같은 군말 · 잡음
+    const cov = new Uint8Array(VE.db.length); for (const w of VE.words) for (let i = Math.max(0, Math.floor((w.s - .15) / .02)); i < Math.min(cov.length, Math.ceil((w.e + .15) / .02)); i++) cov[i] = 1;
+    let st = -1, hit = false;
+    const upto = Math.min(VE.db.length, Math.floor((VE.asrUpTo == null ? 1e9 : VE.asrUpTo) / .02));
+    for (let i = 0; i <= upto; i++) { const vo = i < upto && VE.db[i] > VE.thr;
+      if (vo && st < 0) { st = i; hit = false; } if (vo && cov[i]) hit = true;
+      if (!vo && st >= 0) { if (!hit && i - st >= 4 && (i - st) * .02 < 1.2) cuts.push([st * .02 - .06, i * .02 + .06]); st = -1; } }
+  }
+  cuts.sort((x, y) => x[0] - y[0]); const mc = [];
+  for (const c of cuts) { if (c[1] <= c[0]) continue; const l = mc[mc.length - 1]; if (l && c[0] <= l[1] + .05) l[1] = Math.max(l[1], c[1]); else mc.push(c.slice()); }
+  let keep = [], t = 0; for (const [a, b] of mc) { if (a > t) keep.push([t, a]); t = Math.max(t, b); } if (t < dur) keep.push([t, dur]);
+  keep = keep.filter(k => k[1] - k[0] >= .2); if (!keep.length) keep = [[0, dur]];
+  VE.cuts = mc; VE.keep = keep;
+  // 자막 묶기
+  const ws = VE.words.filter(w => !fill(w)), g = VE.set.group === 'auto' ? (VE.set.ratio === '16:9' ? 'line' : 'short') : VE.set.group;
+  const maxC = { word: 7, short: 12, line: 20, two: 34 }[g], maxW = { word: 2, short: 3, line: 6, two: 10 }[g];
+  const caps = []; let cur = null;
+  for (const w of ws) { const lw = cur && cur.words[cur.words.length - 1];
+    if (!cur || cur.text.length + 1 + w.w.length > maxC || cur.words.length >= maxW || w.s - lw.e > .6 || /[.?!]$/.test(lw.w)) { cur = { words: [], text: '', s: w.s, e: w.e }; caps.push(cur); }
+    cur.words.push({ w: w.w, s: w.s, e: w.e }); cur.text = cur.words.map(x => x.w).join(' '); cur.e = w.e; }
+  caps.forEach((c, i) => { c.e = Math.min(i + 1 < caps.length ? caps[i + 1].s : dur, c.e + .35); });
+  VE.caps = caps; veMarks();
+}
+function veMarks() { // 강조 단어 · 이모지
+  const O = VE.set.opt; VE.emphW = []; let lastEmo = '';
+  for (const c of VE.caps) { c.emo = '';
+    for (const w of c.words) { w.emph = VE_EMPH.test(w.w) || (c.words.length > 1 && w.w.length >= 5 && w === c.words.reduce((a, b) => b.w.length > a.w.length ? b : a)); if (w.emph) VE.emphW.push(w); }
+    if (O.emoji) { const m = VE_EMOJI.find(([re]) => re.test(c.text)); if (m && m[1] !== lastEmo) { c.emo = m[1]; lastEmo = m[1]; } else if (!m) lastEmo = ''; } }
+}
+const veSeg = t => { if (!VE.keep || !VE.set.opt.cut) return 0; for (let i = 0; i < VE.keep.length; i++) if (t >= VE.keep[i][0] - .001 && t < VE.keep[i][1]) return i; return -1; };
+const sm = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
+function veZoom(t) {
+  if (!VE.set.opt.zoom) return 1 + veThemeZoom(t); let z = 1 + veThemeZoom(t); const k = veSeg(t); if (VE.set.opt.cut && VE.keep && k > 0) z = k % 2 ? 1.12 : 1.02;
+  for (const w of VE.emphW) { if (t < w.s - .2 || t > w.e + .8) continue; z += .07 * Math.min(sm((t - w.s + .1) / .16), 1 - sm((t - w.e - .25) / .45)); }
+  return z;
+}
+// 편집 후 시간 (자막 파일용)
+function veOutT(t) { if (!VE.keep || !VE.set.opt.cut) return t; let o = 0; for (const [a, b] of VE.keep) { if (t < a) return o; if (t < b) return o + t - a; o += b - a; } return o; }
+const veOutDur = () => VE.keep && VE.set.opt.cut ? VE.keep.reduce((a, k) => a + k[1] - k[0], 0) : VE.dur;
+// ---------- 그리기 ----------
+function veSize() {
+  const v = $('#veVid'), q = +VE.set.q, r = VE.set.ratio; let W, H;
+  if (r === '9:16') { W = q; H = Math.round(q * 16 / 9); } else if (r === '16:9') { H = q; W = Math.round(q * 16 / 9); } else if (r === '1:1') { W = H = q; }
+  else { const vw = v.videoWidth || 1080, vh = v.videoHeight || 1920, s = Math.min(1, (q === 1080 ? 1920 : 1280) / Math.max(vw, vh)); W = Math.round(vw * s / 2) * 2; H = Math.round(vh * s / 2) * 2; }
+  const c = $('#veCv'); if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+  $$('#veRatio [data-r]').forEach(b => b.classList.toggle('on', b.dataset.r === r)); $('#vePanWrap').hidden = r === 'orig';
+}
+function veDraw() {
+  const v = $('#veVid'), c = $('#veCv'), x = c.getContext('2d'), W = c.width, H = c.height; if (!v.videoWidth) return;
+  const t = v.currentTime, z = veZoom(t), vw = v.videoWidth, vh = v.videoHeight, s = Math.max(W / vw, H / vh) * z, dw = vw * s, dh = vh * s;
+  x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
+  const draw = () => x.drawImage(v, (W - dw) / 2 - VE.set.pan * (dw - W) / 2, (H - dh) * .45, dw, dh); draw();
+  veFx(x, W, H, draw); veOver(x, W, H, t); veCap(x, W, H, t); veSticker(x, W, H, t);
+}
+function rrect(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
+function veCap(x, W, H, t) {
+  const ci = VE.caps.findIndex(c => t >= c.s && t < c.e); if (ci < 0) return; const c = VE.caps[ci], S = VES[VE.set.style] || VES.pop;
+  const base = Math.min(W, H) * (W > H ? .78 : 1), fs = Math.round(base * S.size * VE.set.size), age = t - c.s;
+  x.save(); x.font = `${S.w} ${fs}px ${S.font}`; x.textBaseline = 'middle'; x.lineJoin = 'round'; x.miterLimit = 2;
+  // 줄 나누기
+  const sp = x.measureText(' ').width, maxW = W * .86, lines = [[]]; let lw = 0;
+  for (const w of c.words) { const ww = x.measureText(w.w).width; if (lines[lines.length - 1].length && lw + sp + ww > maxW) { lines.push([]); lw = 0; } lines[lines.length - 1].push({ ...w, ww, ref: w }); lw += (lw ? sp : 0) + ww; }
+  const lh = fs * 1.22, cy = H * VE.set.y - (lines.length - 1) * lh / 2;
+  let alpha = 1; if (S.fade) alpha = Math.max(0, Math.min(1, age / .15, (c.e - t) / .15));
+  let sc = 1; if (S.pop) { const u = Math.min(1, age / (S.pop === 2 ? .24 : .16)); sc = .72 + .28 * (1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2)); }
+  x.globalAlpha = alpha; x.translate(W / 2, cy); if (S.tilt) x.rotate(S.tilt); x.scale(sc, sc);
+  const nowW = c.words.reduce((a, w, i) => t >= w.s ? i : a, -1);
+  const total = c.text.length; let typed = S.type ? Math.floor(total * Math.min(1, age / Math.max(.25, (c.e - c.s) * .6))) : 1e9, chars = 0;
+  if (S.bg) { const bw = Math.max(...lines.map(l => l.reduce((a, w) => a + w.ww, 0) + sp * (l.length - 1))) + fs * .9, bh = lines.length * lh + fs * .4; x.fillStyle = S.bg; rrect(x, -bw / 2, -fs * .2 - lh / 2, bw, bh, fs * .3); x.fill(); }
+  if (S.shadow) { x.shadowColor = 'rgba(0,0,0,.7)'; x.shadowBlur = fs * .3; x.shadowOffsetY = fs * .05; }
+  let k = 0;
+  lines.forEach((ln, li) => { const tw = ln.reduce((a, w) => a + w.ww, 0) + sp * (ln.length - 1); let px = -tw / 2; const py = li * lh;
+    for (const w of ln) { const idx = k++, on = idx === nowW, emph = w.ref.emph && t >= w.s;
+      let txt = w.w; if (S.type) { const left = typed - chars; chars += w.w.length + 1; if (left <= 0) { px += w.ww + sp; continue; } txt = w.w.slice(0, left); }
+      const s2 = on && S.hiScale ? S.hiScale : emph && S.pop ? 1.06 : 1; x.save(); x.translate(px + w.ww / 2, py); x.scale(s2, s2);
+      if (S.box && on) { x.save(); x.shadowColor = 'transparent'; x.fillStyle = S.box; rrect(x, -w.ww / 2 - fs * .14, -fs * .62, w.ww + fs * .28, fs * 1.2, fs * .2); x.fill(); x.restore(); }
+      const col = (on && S.hi) ? S.hi : (emph && (S.pop || S.box) ? (S.hi || '#FFE14D') : S.fill);
+      if (S.glow) { x.shadowColor = on ? S.hi : S.glow; x.shadowBlur = fs * .45; }
+      if (S.outer) { x.lineWidth = fs * (S.sw + .14); x.strokeStyle = S.outer; x.strokeText(txt, -w.ww / 2, 0); }
+      if (S.stroke) { x.lineWidth = fs * S.sw; x.strokeStyle = S.stroke; x.strokeText(txt, -w.ww / 2, 0); }
+      x.fillStyle = col; x.textAlign = 'left'; x.fillText(txt, -w.ww / 2, 0);
+      if (S.glow) { x.shadowBlur = fs * .15; x.fillText(txt, -w.ww / 2, 0); }
+      if (S.wipe && t >= w.s) { const p = Math.min(1, (t - w.s) / Math.max(.08, w.e - w.s)); x.save(); x.beginPath(); x.rect(-w.ww / 2, -fs, w.ww * p, fs * 2); x.clip(); x.fillStyle = S.wipe; x.fillText(txt, -w.ww / 2, 0); x.restore(); }
+      x.restore(); px += w.ww + sp; } });
+  if (c.emo) { const u = Math.min(1, age / .3), b = 1 + Math.sin(u * Math.PI) * .25; x.shadowColor = 'transparent'; x.font = `${Math.round(fs * 1.15)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; x.textAlign = 'center';
+    x.save(); x.translate(0, -lh / 2 - fs * .95); x.scale(b, b); x.fillText(c.emo, 0, 0); x.restore(); }
+  x.restore();
+}
+// 타임라인: 파형 · 잘릴 구간 · 자막 · 재생 위치
+function veTl() {
+  const c = $('#veTl'); if (!c || !VE.dur || curPage() !== 'video') return; const d = DPR(), W = c.clientWidth || 600, H = 88; if (c.width !== W * d) { c.width = W * d; c.height = H * d; }
+  const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0); x.fillStyle = '#140e0b'; x.fillRect(0, 0, W, H); const sx = W / VE.dur;
+  if (VE.db) { x.fillStyle = '#5fe0c8'; const n = VE.db.length; for (let px = 0; px < W; px++) { const a = Math.floor(px / W * n), b = Math.max(a + 1, Math.floor((px + 1) / W * n)); let m = -90; for (let i = a; i < b; i++) m = Math.max(m, VE.db[i]); const h = Math.max(1, (m + 60) / 60 * 26); x.globalAlpha = m > VE.thr ? .85 : .35; x.fillRect(px, 30 - h, 1, h * 2); } x.globalAlpha = 1; }
+  else { x.fillStyle = '#85705f'; x.font = '12px "Noto Sans KR",sans-serif'; x.fillText('소리 분석 중…', 8, 34); }
+  if (VE.set.opt.cut) for (const [a, b] of VE.cuts) { x.fillStyle = 'rgba(10,6,4,.72)'; x.fillRect(a * sx, 0, Math.max(1, (b - a) * sx), 62); x.fillStyle = '#e8677a'; x.fillRect(a * sx, 60, Math.max(1, (b - a) * sx), 2); }
+  for (const cp of VE.caps) { x.fillStyle = cp === VE.caps[VE.capIdx] ? '#ffb547' : 'rgba(242,207,134,.55)'; x.fillRect(cp.s * sx, 68, Math.max(2, (cp.e - cp.s) * sx - 1), 14); }
+  const t = $('#veVid').currentTime; x.fillStyle = '#fff'; x.fillRect(t * sx - 1, 0, 2, H);
+}
+// ---------- 자막 목록 ----------
+function veDecoUI() {
+  $$('#veThemes [data-th]').forEach(b => b.classList.toggle('on', b.dataset.th === VE.set.theme)); $$('#veFilters [data-fx]').forEach(b => b.classList.toggle('on', b.dataset.fx === VE.set.fx));
+  $('#veBgm').value = VE.set.bgm; $('#veBgmVol').value = VE.set.bgmVol; $('#veOrigVol').value = VE.set.origVol; if (document.activeElement !== $('#veTitle')) $('#veTitle').value = VE.set.title || '';
+  $('#veIntro').checked = !!VE.set.intro; $('#veTrans').value = VE.set.trans; $('#veBeat').checked = !!VE.set.beat; $$('#veStyles [data-vs]').forEach(b => b.classList.toggle('on', b.dataset.vs === VE.set.style)); veDecoNote(); }
+function veStkUI() { const l = VE.stickers || []; $('#veStkList').innerHTML = l.map((s, i) => `<button type="button" class="btn sm" data-sd="${i}" title="지우기">${s.emo} ${vfmt(s.s)} ✕</button>`).join(''); }
+function veCapsUI() {
+  const box = $('#veCaps'); $('#veCapN').textContent = VE.caps.length ? `${VE.caps.length}개` : '';
+  box.innerHTML = VE.caps.length ? VE.caps.map((c, i) => `<div class="vc" data-i="${i}"><button class="btn sm" type="button" data-seek="${i}">${vfmt(c.s)}</button><input type="text" value="${esc(c.text)}" data-ci="${i}" aria-label="자막 ${i + 1}"><button class="btn sm" type="button" data-del="${i}" aria-label="자막 삭제">✕</button></div>`).join('')
+    : '<p class="note">✨ 자동 편집을 하면 여기에 자막이 나옵니다. 직접 넣으려면 아래 ＋ 버튼.</p>';
+  VE.capIdx = -2;
+}
+function veCapText(i, txt) { const c = VE.caps[i]; if (!c) return; const parts = txt.trim().split(/\s+/).filter(Boolean); if (!parts.length) return;
+  const tot = parts.reduce((a, p) => a + p.length, 0), span = Math.max(.3, (c.words.length ? c.words[c.words.length - 1].e : c.e) - c.s); let t = c.s;
+  c.words = parts.map(p => { const d = span * p.length / tot, w = { w: p, s: t, e: t + d }; t += d; return w; }); c.text = parts.join(' '); veMarks(); }
+// ---------- 미리보기 재생 ----------
+function veToggle() { const v = $('#veVid'); if (!VE.dur || VE.exp) return; veSrc(); v.muted = false; if (v.paused) { if (VE.keep && VE.set.opt.cut && veSeg(v.currentTime) < 0) { const nx = VE.keep.find(k => k[0] > v.currentTime); v.currentTime = nx ? nx[0] : VE.keep[0][0]; } if (v.ended || v.currentTime >= VE.dur - .05) v.currentTime = VE.keep && VE.set.opt.cut ? VE.keep[0][0] : 0; v.play().catch(() => { }); } else v.pause(); }
+(function veLoop() { requestAnimationFrame(veLoop); if (curPage() !== 'video' || !VE.dur) return; const v = $('#veVid');
+  if (!v.paused && !VE.exp && VE.keep && VE.set.opt.cut) { const k = veSeg(v.currentTime); if (k < 0 && !v.seeking) { const nx = VE.keep.find(s => s[0] > v.currentTime); if (nx) v.currentTime = nx[0]; else v.pause(); } }
+  const now = performance.now(); if (!v.paused || VE.exp || now - (VE.lastDraw || 0) > 160) { VE.lastDraw = now; veDraw(); } veMixTick(v.currentTime); if (now - (VE.lastTl || 0) > 125 && !VE.exp) { VE.lastTl = now; veTl(); } const lb = v.paused ? '▶' : '❚❚'; if ($('#vePlay').textContent !== lb) $('#vePlay').textContent = lb;
+  $('#veTime').textContent = `${vfmt(v.currentTime)} / ${vfmt(VE.dur)}${VE.keep && VE.set.opt.cut ? ` → 편집 후 ${vfmt(veOutDur())}` : ''}`;
+  const ci = VE.caps.findIndex(c => v.currentTime >= c.s && v.currentTime < c.e); if (ci !== VE.capIdx) { VE.capIdx = ci; $$('#veCaps .vc').forEach(r => r.classList.toggle('now', +r.dataset.i === ci)); const r = $(`#veCaps .vc[data-i="${ci}"]`); if (r && !v.paused) r.scrollIntoView({ block: 'nearest' }); } })();
+// ---------- 자동 편집 버튼 ----------
+async function veAuto() {
+  if (!VE.dur || VE.exp || VE.busy) return; const b = $('#veAuto'); b.disabled = true; VE.busy = true; const t0 = performance.now();
+  try {
+    veSt('영상 소리 읽는 중…', true); const audio = VE.audio || await (VE.audioP || Promise.reject()).catch(() => null) || await veExtract(VE.file);
+    if (!audio) throw new Error('소리를 읽지 못했습니다');
+    VE.words = []; VE.asrUpTo = 0; VE.talk = true; veBuild(); veCapsUI();
+    const parts = veChunks(), model = VE_MODELS[VE.set.model] || VE_MODELS.fast; let asrOk = true, k = 0;
+    if (!VE.ready) veSt(VE.dl ? `AI 음성 인식 모델 받는 중… <b>${VE.dl.pct}%</b>` : 'AI 음성 인식 준비 중…', true);
+    for (const [a, z] of parts) {
+      let ch;
+      try { ch = await veASR(audio.slice(Math.floor(a * 16000), Math.ceil(z * 16000)), model); }
+      catch (e) { asrOk = false; console.warn(e); veSt(`음성 인식을 쓸 수 없어 <b>컷·줌만</b> 적용합니다 (${esc(String(e.message || e)).slice(0, 80)}). https 주소(GitHub Pages)에서 열었는지, 인터넷 연결을 확인하세요.`); break; }
+      VE.words.push(...veWords(ch.map(c => ({ text: c.text, timestamp: [c.timestamp[0] == null ? null : c.timestamp[0] + a, c.timestamp[1] == null ? null : c.timestamp[1] + a] }))));
+      VE.asrUpTo = z; k++; veBuild(); veCapsUI(); veTl();
+      if (k < parts.length) veSt(`🗣 자막 만드는 중… <b>${k}/${parts.length}</b> (${Math.round(z / VE.dur * 100)}%) ${VE.dev === 'webgpu' ? '· ⚡ GPU' : ''} — 나온 자막은 ▶ 로 미리 볼 수 있어요`, true);
+    }
+    VE.asrUpTo = null; const spoken = VE.words.reduce((a, w) => a + w.e - w.s, 0); VE.talk = VE.words.length >= Math.max(2, VE.dur / 8) && spoken > VE.dur * .12; if (!VE.talk) VE.words = []; veBuild(); veCapsUI(); veTl();
+    if (VE.set.opt.deco && !VE.userTheme) veApplyTheme(VE.talk && VE.words.length ? 'travel' : 'cute', true); else veBgmPrepare();
+    const v = $('#veVid'); if (v.paused) await seekTo(v, VE.keep[0][0]);
+    const sec = Math.round((performance.now() - t0) / 1000);
+    if (asrOk && !VE.talk) veSt(`<b>완료!</b> 말소리가 없는 영상이라 컷 없이 ${VE.set.opt.deco && !VE.userTheme ? `<b>🐶 귀염뽀짝 테마</b>(필터·배경음악·제목·박자 줌)로 꾸몄어요` : '두었어요'}. ▶ 로 보고, ② 꾸미기에서 테마·음악·제목을 바꾸거나 ④에서 스티커를 붙여 보세요.`);
+    else if (asrOk) veSt(VE.words.length ? `<b>완료!</b> (${sec}초${VE.dev === 'webgpu' ? ' · ⚡ GPU' : ''}) 자막 ${VE.caps.length}개 · 잘라낸 구간 ${VE.set.opt.cut ? VE.cuts.length : 0}곳 · ${vfmt(VE.dur)} → <b>${vfmt(veOutDur())}</b>. ▶ 로 확인하고, 틀린 자막은 ③에서 고치세요.`
+      : '말소리를 찾지 못했습니다 — 컷·줌만 적용했습니다. 자막은 ③에서 직접 추가할 수 있어요.');
+  } catch (e) { veSt('자동 편집 실패: ' + esc(e.message || e)); }
+  finally { b.disabled = false; VE.busy = false; VE.asrUpTo = null; veKill(); }
+}
+// ---------- 저장 (mp4) ----------
+async function veExport() {
+  if (VE.exp) { VE.exp.cancel = true; return; } if (!VE.dur) return;
+  const v = $('#veVid'), cv = $('#veCv');
+  // ⚠ 아이폰: 아래 세 줄은 버튼을 누른 '바로 그 순간'에 실행돼야 소리 있는 재생이 허용됩니다 (await 전에)
+  const ctx = Eng.ensure(); veSrc(); v.muted = false;
+  try { const p0 = v.play(); if (p0 && p0.catch) p0.catch(() => { }); v.pause(); } catch (e) { }
+  if (!window.MediaRecorder || !cv.captureStream) { veXs('이 브라우저는 영상 녹화를 지원하지 않습니다. 아이폰은 iOS 15 이상 사파리, PC는 크롬에서 열어 주세요.'); return; }
+  const types = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1.4d002a,mp4a.40.2', 'video/mp4;codecs=avc1.42E01F,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a', 'video/mp4;codecs=avc1.640028,opus', 'video/mp4;codecs=avc1.42E01F,opus', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  const mime = types.find(m => { try { return MediaRecorder.isTypeSupported(m); } catch (e) { return false; } }) || '';
+  if (Eng.playing) stopPlay(true);
+  veKill();
+  const segs = VE.keep && VE.set.opt.cut ? VE.keep : [[0, VE.dur]], total = segs.reduce((a, s) => a + s[1] - s[0], 0);
+  VE.exp = { cancel: false }; $('#veOut').hidden = true; const btn = $('#veExport'); btn.textContent = '■ 그만두기'; $('#veAuto').disabled = true;
+  veXs('🎬 준비 중…', true); $('#veBar').style.width = '0';
+  let lock = null, msd = null, rec = null, chunks = [], done = 0, step = '준비';
+  try {
+    try { lock = navigator.wakeLock && await navigator.wakeLock.request('screen'); } catch (e) { }
+    if (ctx.state !== 'running') { try { await ctx.resume(); } catch (e) { } }
+    step = '오디오 연결'; msd = ctx.createMediaStreamDestination(); VE.orig.connect(msd); veBgmNode().connect(msd); veBgmStop();
+    step = '화면 캡처'; const vt = cv.captureStream(30).getVideoTracks();
+    const stream = new MediaStream([...vt, ...msd.stream.getAudioTracks()]);
+    step = '녹화기 만들기'; const opt = { videoBitsPerSecond: cv.width * cv.height > 1.5e6 ? 10e6 : 5e6, audioBitsPerSecond: 160000 };
+    try { rec = new MediaRecorder(stream, mime ? { ...opt, mimeType: mime } : opt); } catch (e) { rec = new MediaRecorder(stream); }
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    let started = false, canPause = typeof rec.pause === 'function';
+    for (const [a, b] of segs) {
+      if (VE.exp.cancel) break;
+      step = '장면 이동'; v.pause(); await seekTo(v, a); veDraw(); await new Promise(r => setTimeout(r, 60));
+      step = '녹화 시작'; if (!started) { rec.start(1000); started = true; } else if (canPause && rec.state === 'paused') rec.resume();
+      step = '재생'; try { await v.play(); }
+      catch (e) { throw Object.assign(new Error('영상 재생이 막혔습니다 — 미리보기 ▶ 를 한 번 눌러 재생한 뒤 다시 저장해 보세요'), { name: e.name }); }
+      veBgmStart(veOutT(a)); step = '녹화 중';
+      await new Promise(res => { let last = -1, still = 0; const chk = () => { const tt = v.currentTime, pct = Math.min(100, (done + Math.max(0, tt - a)) / total * 100);
+        $('#veBar').style.width = pct + '%'; veXs(`🎬 영상 만드는 중… <b>${Math.round(pct)}%</b> — 화면을 켜 두세요`, true);
+        if (tt === last) still++; else { still = 0; last = tt; }
+        if (VE.exp.cancel || tt >= b - .02 || v.ended || still > 240) return res(); requestAnimationFrame(chk); }; chk(); });
+      v.pause(); veBgmStop(); if (canPause && rec.state === 'recording' && segs.length > 1) rec.pause(); done += b - a;
+    }
+    step = '마무리'; if (rec.state !== 'inactive') await new Promise(r => { rec.onstop = r; try { rec.requestData && rec.state === 'recording' && rec.requestData(); } catch (e) { } rec.stop(); });
+  } catch (e) {
+    veXs(`저장 실패 (${esc(step)}): <b>${esc(e.message || e)}</b>${e.name ? ` <span class="note">[${esc(e.name)}]</span>` : ''} — 이 문구를 캡처해서 알려 주시면 고칠 수 있어요.`);
+    VE.exp = null; $('#veBar').style.width = '0'; return;
+  } finally { veBgmStop(); try { msd && VE.orig.disconnect(msd); } catch (e) { } try { msd && VE.bgmG.disconnect(msd); } catch (e) { } try { lock && lock.release(); } catch (e) { } btn.textContent = '🎬 영상 만들기'; $('#veAuto').disabled = false; if (VE.exp && VE.exp.cancel) { VE.exp = null; veXs('그만뒀습니다.'); $('#veBar').style.width = '0'; } }
+  if (!VE.exp) return; VE.exp = null;
+  if (!chunks.length) { veXs('녹화된 데이터가 없습니다 — 화면이 꺼졌거나 다른 앱으로 넘어갔을 수 있어요. 화면을 켠 채로 다시 해 보세요.'); return; }
+  const type = (rec.mimeType || mime || 'video/mp4').split(';')[0], ext = type.includes('webm') ? 'webm' : 'mp4', d = new Date(), z = n => String(n).padStart(2, '0');
+  const name = `SoulLab_${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}.${ext}`;
+  const blob = new Blob(chunks, { type }); VE.out = new File([blob], name, { type });
+  const a = $('#veDl'); if (a.href) URL.revokeObjectURL(a.href); a.href = URL.createObjectURL(blob); a.download = name; $('#veOut').hidden = false;
+  let share = false; try { share = !!(navigator.canShare && navigator.canShare({ files: [VE.out] })); } catch (e) { } $('#veShare').hidden = !share;
+  veXs(`<b>완성!</b> ${vfmt(total)} · ${(blob.size / 1e6).toFixed(1)}MB · ${ext.toUpperCase()}. ${share ? '아이폰은 <b>📲 사진 앱에 저장</b> → <b>비디오 저장</b>을 누르세요.' : '⇩ 내려받기를 누르세요.'}`);
+  $('#veBar').style.width = '100%';
+  const pv = $('#veOutPv'); pv.preload = 'none'; pv.src = a.href; pv.hidden = false;
+}
+function veSrt() {
+  if (!VE.caps.length) { veXs('자막이 없습니다. 먼저 ✨ 자동 편집을 하세요.'); return; }
+  const f = s => { const ms = Math.round(s * 1000), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, ss = Math.floor(ms / 1000) % 60; return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')},${String(ms % 1000).padStart(3, '0')}`; };
+  let n = 0; const txt = VE.caps.map(c => { const a = veOutT(c.s), b = veOutT(c.e); if (b - a < .05) return ''; return `${++n}\n${f(a)} --> ${f(b)}\n${c.text}\n`; }).filter(Boolean).join('\n');
+  const url = URL.createObjectURL(new Blob([txt], { type: 'text/plain;charset=utf-8' })), el = document.createElement('a'); el.href = url; el.download = 'SoulLab_subtitles.srt'; document.body.appendChild(el); el.click(); el.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+  veXs('자막 파일(.srt)을 내려받았습니다 — 유튜브 스튜디오 → 자막 → 파일 업로드에 쓰면 됩니다. (편집 후 시간 기준)');
+}
+// =================== 꾸미기 : 악기(음악 스튜디오와 같은 음색) ===================
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const NOISE = new WeakMap();
+function noiseBuf(ctx) { if (NOISE.has(ctx)) return NOISE.get(ctx); const b = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; NOISE.set(ctx, b); return b; }
+function impulse(ctx, sec, decay) { const n = ctx.sampleRate * sec | 0, b = ctx.createBuffer(2, n, ctx.sampleRate); for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, decay) * (i < 200 ? i / 200 : 1); } return b; }
+function satCurve(k) { const n = 2048, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / n * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); } return c; }
+function env(g, t, a, peak, d, sus, end, rel) {
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a);
+  g.gain.setTargetAtTime(sus, t + a, d / 3); g.gain.setValueAtTime(sus, Math.max(t + a, end)); g.gain.setTargetAtTime(0, Math.max(t + a, end), rel / 3);
+}
+// 주기 파형 (배음 구성) 캐시
+const PW = new WeakMap();
+function pwave(ctx, name, fn) { let m = PW.get(ctx); if (!m) PW.set(ctx, m = {}); if (!m[name]) { const n = 64, re = new Float32Array(n + 1), im = new Float32Array(n + 1); for (let k = 1; k <= n; k++) im[k] = fn(k); m[name] = ctx.createPeriodicWave(re, im); } return m[name]; }
+function drum(ctx, out, inst, t, v, kit) {
+  const N = noiseBuf(ctx), K = kit || 'kit';
+  if (K === 'lofi') { const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3400; lp.Q.value = .4; lp.connect(out); out = lp; v *= .92; }
+  const nz = (dur, type, f, q, gain, a = .001) => { const s = ctx.createBufferSource(); s.buffer = N; const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + a); g.gain.exponentialRampToValueAtTime(.0005, t + dur); s.connect(fl).connect(g).connect(out); s.start(t, Math.random()); s.stop(t + dur + .05); };
+  const osc = (type, f0, f1, dur, gain, drop) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + (drop || dur * .6));
+    g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(.0005, t + dur); o.connect(g).connect(out); o.start(t); o.stop(t + dur + .05); };
+  const metal = (dur, gain) => { const g = ctx.createGain(), bp = ctx.createBiquadFilter(), hp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 10000; bp.Q.value = .8; hp.type = 'highpass'; hp.frequency.value = 7000;
+    g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(.0005, t + dur); bp.connect(hp).connect(g).connect(out);
+    for (const f of [263, 400, 421, 474, 587, 845]) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f * 1.25; o.connect(bp); o.start(t); o.stop(t + dur + .05); } };
+  switch (inst) {
+    case 'kick':
+      if (K === 'tr808') { osc('sine', 110, 44, 1.1, 1.15 * v, .06); osc('triangle', 180, 60, .04, .28 * v); break; }
+      if (K === 'elec') { osc('sine', 165, 47, .4, 1.2 * v, .07); nz(.008, 'highpass', 3500, .7, .45 * v); break; }
+      if (K === 'acoustic') { osc('sine', 120, 50, .42, 1.15 * v, .07); nz(.02, 'bandpass', 2600, 1, .33 * v); osc('triangle', 190, 70, .06, .3 * v); break; }
+      osc('sine', 130, 42, .55, 1.1 * v); osc('triangle', 220, 60, .08, .35 * v); nz(.012, 'lowpass', 3000, .7, .25 * v); break;
+    case 'snare':
+      if (K === 'tr808') { nz(.17, 'highpass', 1400, .7, .55 * v); osc('triangle', 240, 180, .1, .5 * v); break; }
+      if (K === 'elec') { nz(.19, 'bandpass', 2200, .7, .62 * v); osc('triangle', 220, 170, .08, .35 * v); nz(.07, 'highpass', 6000, .5, .3 * v); break; }
+      if (K === 'acoustic') { nz(.3, 'bandpass', 1700, .6, .75 * v); osc('triangle', 190, 150, .14, .5 * v); nz(.13, 'highpass', 4500, .5, .35 * v); break; }
+      nz(.22, 'bandpass', 1900, .8, .65 * v); osc('triangle', 210, 160, .12, .45 * v); nz(.09, 'highpass', 5000, .5, .25 * v); break;
+    case 'rim': osc('square', 1750, 1650, .035, .22 * v); nz(.03, 'bandpass', 2600, 4, .35 * v); break;
+    case 'clap': for (let i = 0; i < 3; i++) { const tt = t + i * .011; const s = ctx.createBufferSource(); s.buffer = N; const fl = ctx.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = K === 'tr808' ? 1100 : 1300; fl.Q.value = 1.4; const g = ctx.createGain();
+        g.gain.setValueAtTime(0, tt); g.gain.linearRampToValueAtTime(.55 * v, tt + .002); g.gain.exponentialRampToValueAtTime(.001, tt + (i === 2 ? .2 : .03)); s.connect(fl).connect(g).connect(out); s.start(tt, Math.random()); s.stop(tt + .25); } break;
+    case 'snap': nz(.06, 'bandpass', 2400, 3, .6 * v); osc('sine', 1100, 900, .03, .2 * v); break;
+    case 'tom': osc('sine', 175, 100, .45, .95 * v, .2); nz(.04, 'bandpass', 900, 1, .2 * v); break;
+    case 'hat': if (K === 'tr808') metal(.06, .3 * v); else nz(.05, 'highpass', K === 'elec' ? 9000 : 7800, .7, .32 * v); break;
+    case 'ohat': if (K === 'tr808') metal(.36, .26 * v); else nz(.32, 'highpass', 7000, .6, .3 * v); break;
+    case 'ride': nz(1.1, 'highpass', 6500, .5, .15 * v); osc('sine', 3150, 3050, .9, .05 * v); osc('square', 5300, 5200, .5, .018 * v); break;
+    case 'crash': nz(1.9, 'highpass', 4500, .4, .3 * v); nz(1.2, 'bandpass', 7200, 1, .14 * v); break;
+    case 'shaker': nz(.07, 'bandpass', 5200, 1.2, .22 * v, .015); break;
+    case 'click': osc('square', v > .9 ? 1800 : 1200, v > .9 ? 1700 : 1100, .03, .25); break;
+  }
+}
+// ---------- 음색 (프리셋 이름 → 합성 함수) ----------
+const oscs = (ctx, list, t, stop) => list.forEach(o => { o.start(t); o.stop(stop); });
+const INST = {
+  rhodes(ctx, out, t, f, dur, v, end, preset) {
+    const car = ctx.createOscillator(), mod = ctx.createOscillator(), mg = ctx.createGain(), amp = ctx.createGain(), tine = ctx.createOscillator(), tg = ctx.createGain();
+    car.frequency.value = f; mod.frequency.value = f * (preset === 'wurli' ? 2 : 1); if (preset === 'wurli') mod.type = 'triangle';
+    const idx = f * (preset === 'wurli' ? 1.2 + v * 1.8 : 1.1 + v * 2.6);
+    mg.gain.setValueAtTime(idx, t); mg.gain.exponentialRampToValueAtTime(Math.max(1, f * .18), t + .8);
+    mod.connect(mg).connect(car.frequency);
+    tine.frequency.value = f * 7.02; tg.gain.setValueAtTime(.05 * v, t); tg.gain.exponentialRampToValueAtTime(.0005, t + .22); tine.connect(tg).connect(amp);
+    env(amp, t, .004, .23 * v, 1.2, .07 * v, end, .32); car.connect(amp).connect(out); oscs(ctx, [car, mod, tine], t, end + .5);
+  },
+  organ(ctx, out, t, f, dur, v, end) { const g = ctx.createGain(); env(g, t, .01, .09 * v, .1, .08 * v, end, .08); g.connect(out);
+    for (const [r, a] of [[.5, .5], [1, 1], [2, .6], [3, .3], [4, .25]]) { const o = ctx.createOscillator(); o.frequency.value = f * r; const og = ctx.createGain(); og.gain.value = a; o.connect(og).connect(g); o.start(t); o.stop(end + .3); } },
+  piano(ctx, out, t, f, dur, v, end) {
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(), lp = ctx.createBiquadFilter(), amp = ctx.createGain(), pw = pwave(ctx, 'piano', k => (1 / Math.pow(k, 1.45)) * (.35 + .65 * Math.abs(Math.sin(k * Math.PI * .137 + .5))));
+    o.setPeriodicWave(pw); o2.setPeriodicWave(pw); o.frequency.value = f; o2.frequency.value = f; o2.detune.value = 3.5 + Math.min(6, f / 300);
+    const dk = Math.max(.45, Math.min(3, 2.6 - Math.log2(f / 110) * .55));
+    lp.type = 'lowpass'; lp.Q.value = .3; lp.frequency.setValueAtTime(Math.min(15000, f * 9 + 3000 * v), t); lp.frequency.setTargetAtTime(Math.max(f * 2.4, 600), t + .01, dk * .35);
+    amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(.2 * v, t + .004); amp.gain.setTargetAtTime(0, t + .004, dk / 2.4); amp.gain.setTargetAtTime(0, Math.max(t + .01, end), .11);
+    const g2 = ctx.createGain(); g2.gain.value = .55; o.connect(lp); o2.connect(g2).connect(lp); lp.connect(amp).connect(out); oscs(ctx, [o, o2], t, end + .7);
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf(ctx); const hb = ctx.createBiquadFilter(); hb.type = 'bandpass'; hb.frequency.value = Math.min(7000, f * 5); hb.Q.value = 1.2; const hg = ctx.createGain();
+    hg.gain.setValueAtTime(.05 * v, t); hg.gain.exponentialRampToValueAtTime(.0005, t + .03); s.connect(hb).connect(hg).connect(out); s.start(t, Math.random()); s.stop(t + .05);
+  },
+  agtr(ctx, out, t, f, dur, v, end, preset) {
+    const el = preset === 'egtr', o = ctx.createOscillator(), o2 = ctx.createOscillator(), lp = ctx.createBiquadFilter(), amp = ctx.createGain(), pw = pwave(ctx, 'gtr', k => Math.abs(Math.sin(k * Math.PI * .19)) / k);
+    o.setPeriodicWave(pw); o2.setPeriodicWave(pw); o.frequency.value = f; o2.frequency.value = f; o2.detune.value = el ? 7 : 2.5;
+    lp.type = 'lowpass'; lp.Q.value = .6; lp.frequency.setValueAtTime(Math.min(14000, f * (el ? 7 : 13)), t); lp.frequency.setTargetAtTime(Math.max(f * 2.2, 500), t + .005, el ? .35 : .18);
+    let node = lp; if (!el) { const body = ctx.createBiquadFilter(); body.type = 'peaking'; body.frequency.value = 210; body.Q.value = 1.2; body.gain.value = 5; lp.connect(body); node = body; }
+    const sus = el ? .07 : .035; amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(.2 * v, t + .002); amp.gain.setTargetAtTime(sus * v, t + .002, el ? .5 : .25); amp.gain.setTargetAtTime(0, Math.max(t + .01, end), .07);
+    const g2 = ctx.createGain(); g2.gain.value = .5; o.connect(lp); o2.connect(g2).connect(lp); node.connect(amp).connect(out); oscs(ctx, [o, o2], t, end + .5);
+  },
+  dist(ctx, out, t, f, dur, v, end) {
+    const pre = ctx.createGain(), sh = ctx.createWaveShaper(), lp = ctx.createBiquadFilter(), cut = ctx.createBiquadFilter(), amp = ctx.createGain();
+    pre.gain.value = 2.2; sh.curve = satCurve(7); sh.oversample = '2x'; lp.type = 'lowpass'; lp.frequency.value = 3400; lp.Q.value = .8; cut.type = 'peaking'; cut.frequency.value = 800; cut.Q.value = 1; cut.gain.value = -4;
+    const os = [-11, 11].map(dt => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = dt; o.connect(pre); return o; });
+    env(amp, t, .004, .075 * v, .3, .06 * v, end, .07); pre.connect(sh).connect(lp).connect(cut).connect(amp).connect(out); oscs(ctx, os, t, end + .3);
+  },
+  clav(ctx, out, t, f, dur, v, end) {
+    const o = ctx.createOscillator(), hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), amp = ctx.createGain(); o.setPeriodicWave(pwave(ctx, 'pulse', k => Math.sin(k * Math.PI * .22) / k)); o.frequency.value = f;
+    hp.type = 'highpass'; hp.frequency.value = 280; lp.type = 'lowpass'; lp.Q.value = 3; lp.frequency.setValueAtTime(5200, t); lp.frequency.setTargetAtTime(1200, t, .06);
+    env(amp, t, .002, .16 * v, .15, .05 * v, Math.min(end, t + .35), .04); o.connect(hp).connect(lp).connect(amp).connect(out); oscs(ctx, [o], t, end + .3);
+  },
+  supersaw(ctx, out, t, f, dur, v, end, preset, kind) {
+    const lp = ctx.createBiquadFilter(), amp = ctx.createGain(), padish = kind === 'pad'; lp.type = 'lowpass'; lp.Q.value = .5;
+    lp.frequency.setValueAtTime(padish ? 1600 : 1800, t); lp.frequency.linearRampToValueAtTime(padish ? 2400 : 5200, t + (padish ? .6 : .05));
+    const os = [-22, -11, 0, 11, 22].map(dt => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = dt + (Math.random() - .5) * 4; o.connect(lp); return o; });
+    env(amp, t, padish ? .45 : .01, (padish ? .02 : .042) * v, .3, (padish ? .018 : .035) * v, end, padish ? 1 : .18); lp.connect(amp).connect(out); oscs(ctx, os, t, end + (padish ? 1.5 : .4));
+  },
+  finger(ctx, out, t, f, dur, v, end) {
+    const amp = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(); o.type = 'triangle'; o2.type = 'sine'; o.frequency.value = f; o2.frequency.value = f; const g2 = ctx.createGain(); g2.gain.value = .9;
+    lp.frequency.setValueAtTime(1300, t); lp.frequency.setTargetAtTime(420, t, .12); env(amp, t, .006, .5 * v, .5, .32 * v, end, .07);
+    o.connect(lp); o2.connect(g2).connect(lp); lp.connect(amp).connect(out); oscs(ctx, [o, o2], t, end + .3);
+  },
+  sub(ctx, out, t, f, dur, v, end) { const amp = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f; const o2 = ctx.createOscillator(); o2.type = 'triangle'; o2.frequency.value = f * 2; const g2 = ctx.createGain(); g2.gain.value = .12;
+    lp.frequency.value = 600; env(amp, t, .006, .62 * v, .4, .5 * v, end, .1); o.connect(lp); o2.connect(g2).connect(lp); lp.connect(amp).connect(out); oscs(ctx, [o, o2], t, end + .3); },
+  synth(ctx, out, t, f, dur, v, end) { const amp = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; lp.Q.value = 7; lp.frequency.setValueAtTime(2200 * v + 300, t); lp.frequency.setTargetAtTime(260, t, .09);
+    env(amp, t, .004, .4 * v, .25, .3 * v, end, .06); o.connect(lp).connect(amp).connect(out); oscs(ctx, [o], t, end + .3); },
+  pick(ctx, out, t, f, dur, v, end) { const amp = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 1.5;
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(); o.type = 'sawtooth'; o2.type = 'square'; o.frequency.value = f; o2.frequency.value = f / 2; const g2 = ctx.createGain(); g2.gain.value = .25;
+    lp.frequency.setValueAtTime(2000, t); lp.frequency.setTargetAtTime(550, t, .08); env(amp, t, .003, .32 * v, .3, .22 * v, end, .05);
+    o.connect(lp); o2.connect(g2).connect(lp); lp.connect(amp).connect(out); oscs(ctx, [o, o2], t, end + .3); },
+  slap(ctx, out, t, f, dur, v, end) { const amp = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 3;
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(); o.type = 'sawtooth'; o2.type = 'triangle'; o.frequency.value = f; o2.frequency.value = f; const g1 = ctx.createGain(); g1.gain.value = .45;
+    lp.frequency.setValueAtTime(3800, t); lp.frequency.setTargetAtTime(480, t, .05); env(amp, t, .002, .42 * v, .2, .22 * v, end, .04);
+    o.connect(g1).connect(lp); o2.connect(lp); lp.connect(amp).connect(out); oscs(ctx, [o, o2], t, end + .3); },
+  upright(ctx, out, t, f, dur, v, end) { const amp = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(1100, t); lp.frequency.setTargetAtTime(380, t, .1);
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(); o.type = 'sine'; o2.type = 'triangle'; o.frequency.value = f; o2.frequency.value = f * 2; const g2 = ctx.createGain(); g2.gain.value = .2;
+    amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(.6 * v, t + .008); amp.gain.setTargetAtTime(.22 * v, t + .01, .25); amp.gain.setTargetAtTime(0, Math.max(t + .02, end), .06);
+    o.connect(lp); o2.connect(g2).connect(lp); lp.connect(amp).connect(out); oscs(ctx, [o, o2], t, end + .3); },
+  b808(ctx, out, t, f, dur, v, end) { const amp = ctx.createGain(), sh = ctx.createWaveShaper(), lp = ctx.createBiquadFilter(); sh.curve = satCurve(2.4); lp.type = 'lowpass'; lp.frequency.value = 900;
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(f * 1.25, t); o.frequency.exponentialRampToValueAtTime(f, t + .05);
+    amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(.62 * v, t + .004); amp.gain.setTargetAtTime(.5 * v, t + .01, .4); amp.gain.setTargetAtTime(0, Math.max(t + .02, end), .09);
+    o.connect(sh).connect(lp).connect(amp).connect(out); oscs(ctx, [o], t, end + .5); },
+  warm(ctx, out, t, f, dur, v, end, preset) {
+    const amp = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = preset === 'strings' ? 2600 : 1300; lp.Q.value = .6;
+    env(amp, t, preset === 'strings' ? .35 : .6, .05 * v, .8, .045 * v, end, 1.1); lp.connect(amp).connect(out);
+    for (const dt of [-9, 0, 8]) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = dt; o.connect(lp); o.start(t); o.stop(end + 1.6); }
+  },
+  choir(ctx, out, t, f, dur, v, end) {
+    const amp = ctx.createGain(), mixg = ctx.createGain(); env(amp, t, .5, .07 * v, .8, .06 * v, end, 1.2); mixg.connect(amp).connect(out);
+    const src = ctx.createGain(), vib = ctx.createOscillator(), vg = ctx.createGain(); vib.frequency.value = 5; vg.gain.value = f * .006; vib.connect(vg);
+    const os = [-7, 0, 6].map(dt => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = dt; vg.connect(o.frequency); o.connect(src); return o; });
+    for (const [ff, q, g] of [[720, 6, 1], [1150, 8, .55], [2600, 10, .25]]) { const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = ff; bp.Q.value = q; const gg = ctx.createGain(); gg.gain.value = g * 3; src.connect(bp).connect(gg).connect(mixg); }
+    oscs(ctx, [...os, vib], t, end + 1.6);
+  },
+  brass(ctx, out, t, f, dur, v, end, preset) {
+    const amp = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+    if (preset === 'brass') { for (const dt of [-6, 6]) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = dt; o.connect(lp); o.start(t); o.stop(end + .3); }
+      lp.frequency.setValueAtTime(600, t); lp.frequency.linearRampToValueAtTime(3200 * v + 800, t + .04); lp.frequency.setTargetAtTime(1400, t + .05, .1); env(amp, t, .012, .13 * v, .2, .1 * v, end, .08); }
+    else if (preset === 'pluck') { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f; o.connect(lp); o.start(t); o.stop(end + .4); lp.frequency.setValueAtTime(4200, t); lp.frequency.setTargetAtTime(500, t, .07); env(amp, t, .002, .16 * v, .25, .0, end, .1); }
+    else { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(lp); o.start(t); o.stop(end + .3); lp.frequency.value = 2400; lp.Q.value = 3; env(amp, t, .01, .12 * v, .2, .1 * v, end, .1); }
+    lp.connect(amp).connect(out);
+  },
+  bell(ctx, out, t, f, dur, v, end) { const c = ctx.createOscillator(), m = ctx.createOscillator(), mg = ctx.createGain(), amp = ctx.createGain(); c.frequency.value = f; m.frequency.value = f * 3.5;
+    mg.gain.setValueAtTime(f * 2.2, t); mg.gain.exponentialRampToValueAtTime(f * .1, t + 1.2); m.connect(mg).connect(c.frequency);
+    amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(.13 * v, t + .003); amp.gain.setTargetAtTime(0, t + .005, .55); c.connect(amp).connect(out); oscs(ctx, [c, m], t, t + Math.max(dur, 1.8) + .4); },
+  sax(ctx, out, t, f, dur, v, end) { const amp = ctx.createGain(), bp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(); bp.type = 'peaking'; bp.frequency.value = 1150; bp.Q.value = 1.4; bp.gain.value = 9; lp.type = 'lowpass'; lp.frequency.setValueAtTime(1400, t); lp.frequency.linearRampToValueAtTime(3200 * v + 600, t + .06);
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; const vib = ctx.createOscillator(), vg = ctx.createGain(); vib.frequency.value = 5.2; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * .01, t + Math.min(dur, .5)); vib.connect(vg).connect(o.frequency);
+    const br = ctx.createBufferSource(); br.buffer = noiseBuf(ctx); br.loop = true; const bf = ctx.createBiquadFilter(); bf.type = 'bandpass'; bf.frequency.value = 2400; bf.Q.value = 1; const bg = ctx.createGain(); bg.gain.value = .05; br.connect(bf).connect(bg).connect(lp);
+    env(amp, t, .03, .1 * v, .2, .085 * v, end, .08); o.connect(bp).connect(lp).connect(amp).connect(out); oscs(ctx, [o, vib, br], t, end + .3); },
+  soft(ctx, out, t, f, dur, v, end, preset) {
+    const amp = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = preset === 'moog' ? 1900 : 3200; lp.Q.value = preset === 'moog' ? 4 : .7;
+    const o = ctx.createOscillator(); o.type = preset === 'whistle' || preset === 'flute' ? 'sine' : preset === 'moog' ? 'sawtooth' : 'triangle'; o.frequency.value = f;
+    const vib = ctx.createOscillator(), vg = ctx.createGain(); vib.frequency.value = 5.4; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * .012, t + Math.min(dur, .45)); vib.connect(vg).connect(o.frequency);
+    const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2; const g2 = ctx.createGain(); g2.gain.value = preset === 'soft' ? .18 : preset === 'flute' ? .12 : 0; o2.connect(g2).connect(lp);
+    const xs = [o, o2, vib];
+    if (preset === 'flute') { const br = ctx.createBufferSource(); br.buffer = noiseBuf(ctx); br.loop = true; const bf = ctx.createBiquadFilter(); bf.type = 'bandpass'; bf.frequency.value = f * 2; bf.Q.value = 2; const bg = ctx.createGain(); bg.gain.value = .25; br.connect(bf).connect(bg).connect(lp); xs.push(br); }
+    env(amp, t, preset === 'flute' ? .06 : .035, (preset === 'moog' ? .12 : .2) * v, .3, (preset === 'moog' ? .1 : .16) * v, end, .12);
+    o.connect(lp).connect(amp).connect(out); oscs(ctx, xs, t, end + .4);
+  },
+};
+Object.assign(INST, { wurli: INST.rhodes, egtr: INST.agtr, strings: INST.warm, lush: INST.supersaw, pluck: INST.brass, saw: INST.brass, whistle: INST.soft, moog: INST.soft, flute: INST.soft });
+const DEFP = { keys: 'rhodes', bass: 'finger', pad: 'warm', synth: 'pluck', lead: 'soft' };
+function voice(ctx, out, kind, preset, t, m, dur, v) {
+  const p = INST[preset] ? preset : DEFP[kind] || 'soft', fn = INST[p];
+  fn(ctx, out, t, mtof(m), dur, v, t + dur, p, kind);
+}
+
+// =================== 꾸미기 : 필터 · 배경음악 · 제목 · 전환 · 비트 줌 · 스티커 ===================
+// 필터: 캔버스 합성(블렌드)만 사용 → 아이폰에서도 가볍고 똑같이 보임
+//  ['self', a] = 영상을 한 번 더 overlay (대비·채도↑) · [op, 색, a] = 색 입히기 · vig = 비네팅 · grain = 필름 입자
+const VFX = {
+  none: { ko: '원본', ops: [] },
+  vivid: { ko: '선명', ops: [['self', .32]], sw: '#ff4d6d' },
+  warm: { ko: '따뜻한', ops: [['soft-light', '#ff9a3c', .32], ['screen', '#3a1e00', .06]], sw: '#ff9a3c' },
+  cool: { ko: '시원한', ops: [['soft-light', '#3c9bff', .3], ['self', .12]], sw: '#3c9bff' },
+  pastel: { ko: '파스텔', ops: [['screen', '#ffd9ea', .2], ['saturation', '#888', .12], ['soft-light', '#ffffff', .15]], sw: '#ffc2dc' },
+  film: { ko: '필름', ops: [['saturation', '#888', .22], ['screen', '#2a1c12', .28], ['soft-light', '#ffb36b', .18]], vig: .35, grain: .14, sw: '#c9a27a' },
+  cinema: { ko: '시네마', ops: [['self', .22], ['soft-light', '#00838f', .28], ['overlay', '#ff8a3c', .08]], vig: .45, sw: '#20a39e' },
+  bw: { ko: '흑백', ops: [['saturation', '#888', 1], ['self', .2]], vig: .3, grain: .08, sw: '#aaaaaa' },
+  vintage: { ko: '빈티지', ops: [['saturation', '#888', .55], ['color', '#b98b52', .3], ['screen', '#3a2a18', .2]], vig: .5, grain: .16, sw: '#b98b52' },
+  dreamy: { ko: '몽환', ops: [['screen', '#c9a6ff', .18], ['soft-light', '#ff9ad5', .2]], vig: .2, sw: '#c9a6ff' },
+};
+// 배경음악 무드 (음악 스튜디오와 같은 악기로 영상 길이에 맞춰 즉석 작곡)
+const VBGM = {
+  cute: { ko: '귀염뽀짝', bpm: 112, key: 67, prog: [[0, ''], [7, ''], [9, 'm'], [5, '']], kit: 'kit', keys: 'agtr', comp: 'strum', bass: 'finger', bp: 'two', arp: 'bell', ap: 8, drum: { kick: 'x-------x-------', clap: '----x-------x---', shaker: 'x.x.x.x.x.x.x.x.' } },
+  upbeat: { ko: '신나게', bpm: 124, key: 62, prog: [[9, 'm'], [5, ''], [0, ''], [7, '']], kit: 'elec', keys: 'supersaw', comp: 'off', bass: 'synth', bp: 'off', arp: 'pluck', ap: 16, drum: { kick: 'x---x---x---x---', clap: '----x-------x---', ohat: '--x---x---x---x-', hat: 'x.x.x.x.x.x.x.x.' } },
+  emo: { ko: '감성 피아노', bpm: 72, key: 64, prog: [[0, 'add9'], [7, ''], [9, 'm7'], [5, 'maj7']], kit: 'acoustic', keys: 'piano', comp: 'arp', bass: 'sub', bp: 'whole', pad: 'strings', drumFrom: 4, drum: { kick: 'x-------x-------', rim: '----x-------x---', shaker: '--.---.---.---.-' } },
+  lofi: { ko: '로파이', bpm: 80, swing: .55, key: 63, prog: [[2, 'm9'], [7, '13'], [0, 'maj9'], [9, 'm7']], kit: 'lofi', keys: 'rhodes', comp: 'soul', bass: 'finger', bp: 'two', vinyl: 1, drum: { kick: 'x------x--x-----', snare: '----x-------x---', hat: 'x-o-x-o-x-o-x-o-' } },
+  cine: { ko: '시네마틱', bpm: 76, key: 62, prog: [[0, 'm'], [8, ''], [3, ''], [10, '']], kit: 'acoustic', keys: 'piano', comp: 'low', bass: 'sub', bp: 'whole', pad: 'strings', pad2: 'choir', drumFrom: 4, drum: { kick: 'x-------x-------', tom: '------------x-xx' } },
+  travel: { ko: '여행 브이로그', bpm: 100, key: 65, prog: [[0, ''], [9, 'm'], [5, ''], [7, '']], kit: 'acoustic', keys: 'agtr', comp: 'strum', bass: 'finger', bp: 'two', arp: 'bell', ap: 4, drum: { kick: 'x-----x-x-------', snare: '----x-------x---', shaker: 'x.o.x.o.x.o.x.o.' } },
+  funky: { ko: '펑키', bpm: 108, key: 64, prog: [[0, '9'], [5, '9']], kit: 'kit', keys: 'egtr', comp: 'funk', bass: 'slap', bp: 'funk', drum: { kick: 'x-----x---x--x--', snare: '----x-------x---', hat: 'xoxoxoxoxoxoxoxo' } },
+};
+const VQ = { '': [0, 4, 7], m: [0, 3, 7], add9: [0, 4, 7, 14], maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10], m9: [0, 3, 7, 10, 14], maj9: [0, 4, 7, 11, 14], 9: [0, 4, 7, 10, 14], 13: [0, 4, 10, 14, 21] };
+// 테마 = 필터 + 음악 + 자막 스타일 + 효과 한 번에
+const VTHEME = {
+  cute: { ko: '귀염뽀짝', emo: '🐶', fx: 'pastel', bgm: 'cute', style: 'variety', trans: 'zoom', beat: 1, kb: 0, title: '오늘의 귀요미 🐾', font: '"Jua","Do Hyeon",sans-serif', tc: '#fff2a8' },
+  upbeat: { ko: '신나게', emo: '⚡', fx: 'vivid', bgm: 'upbeat', style: 'pop', trans: 'flash', beat: 1, kb: 0, title: 'LET\'S GO ⚡', font: '"Black Han Sans",sans-serif', tc: '#ffffff' },
+  emo: { ko: '감성', emo: '🌙', fx: 'film', bgm: 'emo', style: 'minimal', trans: 'fade', beat: 0, kb: 1, title: '오늘의 기록', font: '"DM Serif Display","Noto Sans KR",serif', tc: '#fff4e0' },
+  lofi: { ko: '로파이', emo: '☕', fx: 'vintage', bgm: 'lofi', style: 'type', trans: 'fade', beat: 0, kb: 1, title: 'chill day ☕', font: '"Noto Sans KR",sans-serif', tc: '#f4e7d7' },
+  cine: { ko: '시네마틱', emo: '🎬', fx: 'cinema', bgm: 'cine', style: 'minimal', trans: 'fade', beat: 0, kb: 1, bars: 1, title: 'A DAY', font: '"DM Serif Display",serif', tc: '#ffffff' },
+  travel: { ko: '여행 브이로그', emo: '🏖', fx: 'warm', bgm: 'travel', style: 'box', trans: 'zoom', beat: 1, kb: 1, title: '여행 브이로그 ✈️', font: '"Black Han Sans",sans-serif', tc: '#ffffff' },
+  none: { ko: '꾸밈 없음', emo: '⬜', fx: 'none', bgm: 'none', style: null, trans: 'none', beat: 0, kb: 0, title: '' },
+};
+const VSTICK = ['🐶', '🐱', '❤️', '✨', '😂', '🔥', '👍', '🎉', '😋', '💯', '🥹', '👀'];
+Object.assign(VE.set, Object.assign({ theme: '', fx: 'none', bgm: 'none', bgmVol: .7, origVol: 1, title: '', intro: true, trans: 'none', beat: 0, kb: 0, bars: 0 }, (() => { try { const s = JSON.parse(localStorage.getItem('soullab:ve') || 'null') || {}; const o = {}; for (const k of ['theme', 'fx', 'bgm', 'bgmVol', 'origVol', 'title', 'intro', 'trans', 'beat', 'kb', 'bars']) if (s[k] != null) o[k] = s[k]; return o; } catch (e) { return {}; } })()));
+if (VE.set.opt.deco == null) VE.set.opt.deco = true;
+// ---------- 필터 그리기 ----------
+let VE_GRAIN = null;
+function veGrain() { if (VE_GRAIN) return VE_GRAIN; const c = document.createElement('canvas'); c.width = c.height = 192; const x = c.getContext('2d'), d = x.createImageData(192, 192); for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (Math.random() - .5) * 200; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } x.putImageData(d, 0, 0); return VE_GRAIN = c; }
+function veFx(x, W, H, draw) {
+  const F = VFX[VE.set.fx] || VFX.none;
+  for (const o of F.ops) { x.save(); if (o[0] === 'self') { x.globalCompositeOperation = 'overlay'; x.globalAlpha = o[1]; draw(); } else { x.globalCompositeOperation = o[0]; x.globalAlpha = o[2]; x.fillStyle = o[1]; x.fillRect(0, 0, W, H); } x.restore(); }
+  if (F.grain) { x.save(); x.globalCompositeOperation = 'overlay'; x.globalAlpha = F.grain; const p = x.createPattern(veGrain(), 'repeat'); x.translate(Math.random() * 192 | 0, Math.random() * 192 | 0); x.fillStyle = p; x.fillRect(-192, -192, W + 192, H + 192); x.restore(); }
+  if (F.vig) { const g = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.hypot(W, H) * .6); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${F.vig})`); x.fillStyle = g; x.fillRect(0, 0, W, H); }
+}
+// 출력 시간 기준 효과: 장면 전환 · 제목 · 끝 페이드 · 시네마 바
+function veOver(x, W, H, t) {
+  const o = veOutT(t), od = veOutDur(), T = VTHEME[VE.set.theme] || {};
+  if (VE.set.bars) { const bh = Math.round(H * (W > H ? .1 : .07)); x.fillStyle = '#000'; x.fillRect(0, 0, W, bh); x.fillRect(0, H - bh, W, bh); }
+  const k = veSeg(t); if (VE.set.trans !== 'none' && VE.keep && VE.set.opt.cut && k > 0) { const dt = o - veOutT(VE.keep[k][0]);
+    if (dt < .22) { const a = 1 - dt / .22; if (VE.set.trans === 'flash') { x.fillStyle = `rgba(255,255,255,${a * .75})`; x.fillRect(0, 0, W, H); } else if (VE.set.trans === 'fade') { x.fillStyle = `rgba(0,0,0,${a * .85})`; x.fillRect(0, 0, W, H); } } }
+  if (VE.set.intro && VE.set.title && o < 2.6) { const a = Math.min(1, o / .35, (2.6 - o) / .45), u = Math.min(1, o / .5), fs = Math.round(Math.min(W, H) * .11);
+    x.save(); x.globalAlpha = Math.max(0, a); x.fillStyle = 'rgba(0,0,0,.28)'; x.fillRect(0, 0, W, H); x.translate(W / 2, H * .45); const s = .8 + .2 * (1 - Math.pow(1 - u, 3)); x.scale(s, s);
+    x.font = `400 ${fs}px ${T.font || '"Black Han Sans",sans-serif'}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+    const lines = veWrap(x, VE.set.title, W * .84); lines.forEach((ln, i) => { const y = (i - (lines.length - 1) / 2) * fs * 1.15; x.lineWidth = fs * .12; x.strokeStyle = 'rgba(0,0,0,.75)'; x.strokeText(ln, 0, y); x.fillStyle = T.tc || '#fff'; x.fillText(ln, 0, y); });
+    const d = new Date(), sub = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+    x.font = `700 ${Math.round(fs * .3)}px "Noto Sans KR",sans-serif`; x.fillStyle = 'rgba(255,255,255,.85)'; x.fillText(sub, 0, (lines.length / 2) * fs * 1.15 + fs * .35); x.restore(); }
+  if (VE.set.theme && VE.set.theme !== 'none' && od - o < .7 && od > 3) { x.fillStyle = `rgba(0,0,0,${Math.min(1, (.7 - (od - o)) / .7)})`; x.fillRect(0, 0, W, H); }
+}
+function veWrap(x, txt, maxW) { const out = []; let cur = ''; for (const w of String(txt).split(/\s+/)) { const t = cur ? cur + ' ' + w : w; if (cur && x.measureText(t).width > maxW) { out.push(cur); cur = w; } else cur = t; } if (cur) out.push(cur); return out.slice(0, 3); }
+// 테마 줌: 천천히 다가가기(켄 번스) + 음악 박자 펄스
+function veThemeZoom(t) { let z = 0; const o = veOutT(t), od = Math.max(1, veOutDur());
+  if (VE.set.kb) z += .07 * Math.min(1, o / od);
+  if (VE.set.beat && VE.bgmBpm) { const ph = (o * VE.bgmBpm / 60) % 1; z += .022 * Math.exp(-ph * 9); }
+  if (VE.set.trans === 'zoom' && VE.keep && VE.set.opt.cut) { const k = veSeg(t); if (k > 0) { const dt = o - veOutT(VE.keep[k][0]); if (dt < .3) z += .12 * Math.pow(1 - dt / .3, 2); } }
+  return z; }
+// 스티커
+function veSticker(x, W, H, t) { for (const s of VE.stickers || []) { if (t < s.s || t > s.e) continue; const age = t - s.s, u = Math.min(1, age / .35), b = 1 + Math.sin(u * Math.PI) * .35 + Math.sin(age * 5) * .04, fs = Math.round(Math.min(W, H) * .16 * (s.size || 1));
+  x.save(); x.globalAlpha = Math.min(1, (s.e - t) / .2); x.translate(W * s.x, H * s.y); x.rotate(Math.sin(age * 3) * .08); x.scale(b, b); x.font = `${fs}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(s.e2 || s.emo, 0, 0); x.restore(); } }
+// ---------- 배경음악 합성 ----------
+async function veMakeBgm(mood, sec) {
+  const M = VBGM[mood]; if (!M) return null; const barSec = 60 / M.bpm * 4; sec = Math.max(1, Math.ceil(sec / barSec)) * barSec; // 마디 단위 → 반복해도 매끄러움
+  const sr = 44100, len = Math.ceil(sec * sr), oc = new OfflineAudioContext(2, len, sr);
+  const out = oc.createGain(); out.gain.value = .55; const comp = oc.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 3; out.connect(comp).connect(oc.destination);
+  const rv = oc.createConvolver(), rvl = Math.round(sr * 2), ib = oc.createBuffer(2, rvl, sr); for (let c = 0; c < 2; c++) { const d = ib.getChannelData(c); for (let i = 0; i < rvl; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rvl, 3); } rv.buffer = ib; const rg = oc.createGain(); rg.gain.value = .22; rv.connect(rg).connect(out);
+  const bus = id => { const g = oc.createGain(); g.gain.value = { drums: .8, bass: .75, keys: .55, pad: .45, arp: .32 }[id]; g.connect(out); if (id !== 'bass' && id !== 'drums') g.connect(rv); return g; };
+  const B = { drums: bus('drums'), bass: bus('bass'), keys: bus('keys'), pad: bus('pad'), arp: bus('arp') };
+  const sd = 60 / M.bpm / 4, at = s => s * sd + ((s | 0) % 2 ? (M.swing || 0) * sd * .62 : 0), bars = Math.round(sec / (sd * 16));
+  for (let bar = 0; bar < bars; bar++) {
+    const [deg, q] = M.prog[bar % M.prog.length], root = M.key + deg, iv = VQ[q] || VQ[''], base = bar * 16, t0 = at(base); if (t0 > sec) break;
+    const ch = iv.map(i => root + i); while (ch[0] > 64) ch.forEach((_, k) => ch[k] -= 12);
+    const bn = 36 + ((root - 36) % 12 + 12) % 12, L = 16 * sd, first = bar === 0;
+    // 코드 악기
+    if (M.comp === 'strum') for (const [o, v, up] of [[0, .8], [4, .6], [6, .5, 1], [10, .55, 1], [12, .7], [14, .5, 1]]) { const ns = up ? ch.slice().reverse() : ch; ns.forEach((m, k) => voice(oc, B.keys, 'keys', M.keys, at(base + o) + k * .012, m, sd * 2.2, v)); }
+    else if (M.comp === 'off') { if (!first) for (const o of [2, 6, 10, 14]) ch.forEach(m => voice(oc, B.keys, 'keys', M.keys, at(base + o), m + 12, sd * .9, .65)); }
+    else if (M.comp === 'arp') { const seq = [ch[0] - 12, ...ch, ch[1] + 12, ...ch.slice(1).reverse()]; for (let o = 0; o < 16; o += 2) voice(oc, B.keys, 'keys', M.keys, at(base + o), seq[(o / 2) % seq.length], sd * 4, o % 8 ? .5 : .65); }
+    else if (M.comp === 'low') { voice(oc, B.keys, 'keys', M.keys, t0, root - 12, L, .7); voice(oc, B.keys, 'keys', M.keys, at(base + 8), root, L / 2, .5); }
+    else if (M.comp === 'funk') { for (const o of [2, 6, 7, 10, 14]) ch.forEach(m => voice(oc, B.keys, 'keys', M.keys, at(base + o), m + 12, sd * .8, .6)); }
+    else for (const [o, l, v] of [[0, 5, .7], [6, 2, .5], [10, 4, .6]]) ch.forEach(m => voice(oc, B.keys, 'keys', M.keys, at(base + o), m, l * sd, v));
+    // 패드
+    if (M.pad) ch.forEach(m => voice(oc, B.pad, 'pad', M.pad, t0, m, L, .6)); if (M.pad2 && bar >= 4) ch.slice(0, 3).forEach(m => voice(oc, B.pad, 'pad', M.pad2, t0, m + 12, L, .5));
+    // 베이스
+    const BP = { two: [[0, 6, 0], [8, 6, 7]], off: [[2, 2, 0], [6, 2, 12], [10, 2, 0], [14, 2, 12]], whole: [[0, 15, 0]], funk: [[0, 2, 0], [3, 1, 12], [6, 1, 0], [10, 2, 0], [13, 1, 12], [14, 2, 7]] }[M.bp] || [[0, 6, 0]];
+    if (!(first && M.drumFrom)) for (const [o, l, p] of BP) voice(oc, B.bass, 'bass', M.bass, at(base + o), bn + p, l * sd, .85);
+    // 아르페지오
+    if (M.arp && bar >= 1) { const st = 16 / M.ap, seq = ch.map(m => m + 12).concat(ch.slice(1, -1).map(m => m + 12).reverse()); for (let o = 0, k = 0; o < 16; o += st, k++) voice(oc, B.arp, 'synth', M.arp, at(base + o), seq[k % seq.length], sd * st * .9, .55); }
+    // 드럼
+    if (!M.drumFrom || bar >= M.drumFrom) for (const [inst, pat] of Object.entries(M.drum)) for (let i = 0; i < 16; i++) { const c = pat[i]; if (!c || c === '-') continue; drum(oc, B.drums, inst, Math.max(0, at(base + i) + (Math.random() - .5) * .006), (c === 'x' ? 1 : c === 'o' ? .7 : .35) * (.92 + Math.random() * .1), M.kit); }
+    if (bar % 8 === 0 && bar && (M.kit === 'elec' || M.kit === 'acoustic')) drum(oc, B.drums, 'crash', t0, .7, M.kit);
+  }
+  if (M.vinyl) { const s = oc.createBufferSource(), n = sr * 2, b = oc.createBuffer(1, n, sr), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() < .0006 ? (Math.random() - .5) * .8 : (Math.random() - .5) * .012; s.buffer = b; s.loop = true; const g = oc.createGain(); g.gain.value = .5; s.connect(g).connect(out); s.start(); }
+  return await oc.startRendering();
+}
+async function veBgmPrepare() {
+  const mood = VE.set.bgm; veBgmStop();
+  if (mood === 'none' || !VE.dur) { VE.bgmBuf = null; VE.bgmBpm = 0; veDecoNote(); return; }
+  if (mood === 'file') { VE.bgmBpm = 0; veDecoNote(); return; }
+  const len = Math.min(48, Math.max(16, veOutDur() + 1)), key = mood + '|' + Math.ceil(len / 8);
+  if (VE.bgmKey === key && VE.bgmBuf) return; const my = VE.bgmJob = {};
+  $('#veDecoSt').innerHTML = '<span class="busy">🎵 배경음악 만드는 중…</span>';
+  try { const t0 = performance.now(), buf = await veMakeBgm(mood, len); VE.bgmMs = Math.round(performance.now() - t0); if (VE.bgmJob !== my) return; VE.bgmBuf = buf; VE.bgmKey = key; VE.bgmBpm = VBGM[mood].bpm; } catch (e) { VE.bgmBuf = null; console.warn(e); }
+  veDecoNote(); const v = $('#veVid'); if (!v.paused) veBgmStart(veOutT(v.currentTime));
+}
+function veBgmNode() { const ctx = Eng.ensure(); if (!VE.bgmG) { VE.bgmG = ctx.createGain(); VE.bgmG.gain.value = 0; VE.bgmG.connect(ctx.destination); } return VE.bgmG; }
+function veBgmStart(off) { veBgmStop(); const buf = VE.set.bgm === 'file' ? VE.bgmFile : VE.bgmBuf; if (!buf) return; const ctx = Eng.ensure(), s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.connect(veBgmNode()); s.start(ctx.currentTime + .01, Math.max(0, off) % buf.duration); VE.bgmSrc = s; VE.bgmT0 = ctx.currentTime + .01 - Math.max(0, off); }
+function veBgmStop() { if (VE.bgmSrc) { try { VE.bgmSrc.stop(); } catch (e) { } VE.bgmSrc = null; } }
+// 매 프레임: 음악 볼륨 (말할 때 자동으로 줄임 · 시작/끝 페이드) · 원본 소리 볼륨
+function veMixTick(t) {
+  if (VE.orig) VE.orig.gain.value = VE.set.origVol;
+  if (!VE.bgmG) return; const ctx = Eng.ctx, o = veOutT(t), od = veOutDur();
+  const talking = VE.caps.some(c => !c.sticker && t >= c.s - .15 && t < c.e);
+  const tgt = VE.set.bgmVol * (talking ? .3 : 1) * Math.min(1, o / .8 + .05, Math.max(0, (od - o) / 1.5));
+  VE.bgmG.gain.setTargetAtTime(VE.bgmSrc ? Math.max(0, tgt) : 0, ctx.currentTime, .08);
+  if (!VE.exp && VE.bgmSrc && !$('#veVid').paused) { const exp = o, act = ctx.currentTime - VE.bgmT0, d = (VE.bgmSrc.buffer.duration); if (Math.abs(((act - exp) % d + d) % d) > .35 && Math.abs(((act - exp) % d + d) % d - d) > .35) veBgmStart(o); }
+}
+function veDecoNote() { const el = $('#veDecoSt'); if (!el) return; const T = VTHEME[VE.set.theme], M = VBGM[VE.set.bgm];
+  el.innerHTML = `${T ? `${T.emo} <b>${T.ko}</b> · ` : ''}필터 <b>${(VFX[VE.set.fx] || VFX.none).ko}</b> · 음악 <b>${VE.set.bgm === 'file' ? (VE.bgmFile ? '내 음악' : '파일을 고르세요') : M ? M.ko : '없음'}</b>${VE.set.title && VE.set.intro ? ` · 제목 "${esc(VE.set.title)}"` : ''}`; }
+function veApplyTheme(k, auto) { const T = VTHEME[k]; if (!T) return; VE.set.theme = k;
+  Object.assign(VE.set, { fx: T.fx, bgm: T.bgm, trans: T.trans, beat: T.beat, kb: T.kb, bars: T.bars || 0 });
+  if (T.style) VE.set.style = T.style; if (!VE.set.title || VTHEME_TITLES.includes(VE.set.title)) VE.set.title = T.title;
+  veSave(); veDecoUI(); veBgmPrepare(); }
+const VTHEME_TITLES = Object.values(VTHEME).map(t => t.title);
+
+// ---------- 화면 연결 ----------
+(function veInit() {
+  $('#veStyles').innerHTML = Object.entries(VES).map(([k, S]) => `<button type="button" class="vst" data-vs="${k}" style="font-family:${S.font.replace(/"/g, "'")};font-weight:${S.w};color:${S.fill};${S.stroke ? `-webkit-text-stroke:1.5px ${S.stroke};paint-order:stroke fill;` : ''}${S.glow ? `text-shadow:0 0 8px ${S.glow};` : ''}${S.bg ? `background:#222;` : ''}"><b>${S.box ? `<span style="background:${S.box};border-radius:4px;padding:0 3px">자막</span>` : S.hi ? `자<span style="color:${S.hi}">막</span>` : S.wipe ? `<span style="color:${S.wipe}">자</span>막` : '자막'}</b><small>${S.ko}</small></button>`).join('');
+  const syncUI = () => { $$('#veStyles [data-vs]').forEach(b => b.classList.toggle('on', b.dataset.vs === VE.set.style)); $('#veSize').value = VE.set.size; $('#veY').value = VE.set.y; $('#veGroup').value = VE.set.group; $('#veModel').value = VE.set.model; $('#veMinSil').value = VE.set.minSil; $('#veQ').value = VE.set.q;
+    for (const k of ['cut', 'filler', 'zoom', 'emoji', 'auto', 'deco']) $('#veOpt_' + k).checked = !!VE.set.opt[k]; $('#veGpu').checked = !!VE.set.gpu; };
+  syncUI();
+  $('#veDrop').addEventListener('click', () => $('#veFile').click());
+  $('#veDrop').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#veFile').click(); } });
+  $('#veDrop').addEventListener('dragover', e => e.preventDefault()); $('#veDrop').addEventListener('drop', e => { e.preventDefault(); veLoad(e.dataTransfer.files[0]); });
+  $('#veFile').addEventListener('change', e => { veLoad(e.target.files[0]); e.target.value = ''; });
+  $('#veNew').addEventListener('click', () => $('#veFile').click());
+  $('#vePlay').addEventListener('click', veToggle);
+  $('#veRatio').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (!b) return; VE.set.ratio = b.dataset.r; veSize(); if (VE.words.length && VE.set.group === 'auto') { veBuild(); veCapsUI(); } veSave(); });
+  $('#vePan').addEventListener('input', e => { VE.set.pan = +e.target.value; });
+  $('#veStyles').addEventListener('click', e => { const b = e.target.closest('[data-vs]'); if (!b) return; VE.set.style = b.dataset.vs; syncUI(); veSave(); });
+  $('#veSize').addEventListener('input', e => { VE.set.size = +e.target.value; veSave(); }); $('#veY').addEventListener('input', e => { VE.set.y = +e.target.value; veSave(); });
+  $('#veGroup').addEventListener('change', e => { VE.set.group = e.target.value; veSave(); if (VE.words.length) { veBuild(); veCapsUI(); } });
+  $('#veModel').addEventListener('change', e => { VE.set.model = e.target.value; veSave(); if (VE.worker) veWarm(); }); $('#veQ').addEventListener('change', e => { VE.set.q = e.target.value; veSave(); veSize(); });
+  $('#veMinSil').addEventListener('change', e => { VE.set.minSil = e.target.value; veSave(); if (VE.db) { veBuild(); veCapsUI(); } });
+  for (const k of ['cut', 'filler', 'zoom', 'emoji', 'auto', 'deco']) $('#veOpt_' + k).addEventListener('change', e => { VE.set.opt[k] = e.target.checked; veSave(); if (k !== 'auto' && k !== 'deco' && VE.db && !VE.busy) { veBgmPrepare(); const caps = VE.caps; veBuild(); if (k === 'zoom' || k === 'emoji') { VE.caps = caps; veMarks(); } veCapsUI(); } });
+  $('#veTl').addEventListener('pointerdown', e => { if (!VE.dur || VE.exp) return; const r = e.currentTarget.getBoundingClientRect(); $('#veVid').currentTime = Math.max(0, Math.min(VE.dur - .05, (e.clientX - r.left) / r.width * VE.dur)); });
+  $('#veCv').addEventListener('click', veToggle);
+  $('#veGpu').addEventListener('change', e => { VE.set.gpu = e.target.checked; veSave(); veKill(); });
+  $('#veAuto').addEventListener('click', () => { const v = $('#veVid'); if (VE.srcNode && v.paused) { VE.spk.gain.value = 0; try { const p0 = v.play(); v.pause(); if (p0 && p0.catch) p0.catch(() => { }); } catch (e) { } setTimeout(() => VE.spk.gain.value = 1, 200); } veAuto(); });
+  $('#veExport').addEventListener('click', veExport); $('#veSrt').addEventListener('click', veSrt);
+  $('#veShare').addEventListener('click', async () => { try { await navigator.share({ files: [VE.out] }); } catch (e) { if (e && e.name !== 'AbortError') veXs('공유 창을 열 수 없습니다 — 영상을 길게 눌러 저장하거나 ⇩ 내려받기를 쓰세요.'); } });
+  $('#veCaps').addEventListener('click', e => { const s = e.target.closest('[data-seek]'), d = e.target.closest('[data-del]');
+    if (s) { $('#veVid').currentTime = VE.caps[+s.dataset.seek].s + .01; }
+    if (d) { VE.caps.splice(+d.dataset.del, 1); veMarks(); veCapsUI(); } });
+  $('#veCaps').addEventListener('input', e => { const i = e.target.dataset.ci; if (i != null) veCapText(+i, e.target.value); });
+  $('#veAddCap').addEventListener('click', () => { if (!VE.dur) return; const t = $('#veVid').currentTime, e = Math.min(VE.dur, t + 2); const c = { s: t, e, words: [{ w: '자막', s: t, e }], text: '자막' };
+    VE.caps.push(c); VE.caps.sort((a, b) => a.s - b.s); veMarks(); veCapsUI(); const i = VE.caps.indexOf(c), inp = $(`#veCaps [data-ci="${i}"]`); if (inp) { inp.focus(); inp.select(); } });
+  $('#veVid').addEventListener('seeked', () => { if ($('#veVid').paused) veDraw(); });
+  $('#veVid').addEventListener('play', () => { if (!VE.exp) veBgmStart(veOutT($('#veVid').currentTime)); });
+  $('#veVid').addEventListener('pause', () => { if (!VE.exp) veBgmStop(); });
+  // 꾸미기
+  $('#veThemes').innerHTML = Object.entries(VTHEME).map(([k, T]) => `<button type="button" class="vth" data-th="${k}" style="--c:${(VFX[T.fx] || {}).sw || '#666'}"><b>${T.emo}</b><span>${T.ko}</span></button>`).join('');
+  $('#veFilters').innerHTML = Object.entries(VFX).map(([k, F]) => `<button type="button" class="chip" data-fx="${k}" style="border-color:${F.sw || 'var(--line)'}">${F.ko}</button>`).join('');
+  $('#veBgm').innerHTML = '<option value="none">없음</option>' + Object.entries(VBGM).map(([k, M]) => `<option value="${k}">${M.ko} · ${M.bpm} BPM</option>`).join('') + '<option value="file">🎵 내 음악 파일…</option>';
+  $('#veStickers').innerHTML = VSTICK.map(e => `<button type="button" class="vsk" data-stk="${e}">${e}</button>`).join('');
+  $('#veThemes').addEventListener('click', e => { const b = e.target.closest('[data-th]'); if (!b) return; VE.userTheme = true; veApplyTheme(b.dataset.th); syncUI(); });
+  $('#veFilters').addEventListener('click', e => { const b = e.target.closest('[data-fx]'); if (!b) return; VE.set.fx = b.dataset.fx; VE.userTheme = true; veSave(); veDecoUI(); if ($('#veVid').paused) veDraw(); });
+  $('#veBgm').addEventListener('change', e => { VE.set.bgm = e.target.value; VE.userTheme = true; veSave(); if (VE.set.bgm === 'file' && !VE.bgmFile) $('#veBgmIn').click(); veBgmPrepare(); veDecoUI(); });
+  $('#veBgmIn').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; $('#veDecoSt').innerHTML = '<span class="busy">음악 파일 여는 중…</span>';
+    try { const ab = await f.arrayBuffer(), ctx = Eng.ensure(); VE.bgmFile = await new Promise((res, rej) => { const p = ctx.decodeAudioData(ab, res, rej); if (p && p.catch) p.catch(rej); }); VE.set.bgm = 'file'; veDecoUI(); const v = $('#veVid'); if (!v.paused) veBgmStart(veOutT(v.currentTime)); }
+    catch (er) { $('#veDecoSt').textContent = '이 음악 파일은 열 수 없습니다 (mp3·m4a·wav).'; } });
+  $('#veBgmVol').addEventListener('input', e => { VE.set.bgmVol = +e.target.value; veSave(); }); $('#veOrigVol').addEventListener('input', e => { VE.set.origVol = +e.target.value; veSave(); });
+  $('#veTitle').addEventListener('input', e => { VE.set.title = e.target.value; veSave(); veDecoNote(); if ($('#veVid').paused) veDraw(); });
+  $('#veIntro').addEventListener('change', e => { VE.set.intro = e.target.checked; veSave(); veDecoNote(); });
+  $('#veTrans').addEventListener('change', e => { VE.set.trans = e.target.value; veSave(); }); $('#veBeat').addEventListener('change', e => { VE.set.beat = e.target.checked ? 1 : 0; veSave(); });
+  $('#veStickers').addEventListener('click', e => { const b = e.target.closest('[data-stk]'); if (!b || !VE.dur) return; const t = $('#veVid').currentTime;
+    (VE.stickers = VE.stickers || []).push({ emo: b.dataset.stk, s: t, e: Math.min(VE.dur, t + 2.5), x: .5 + (Math.random() - .5) * .4, y: .26 + Math.random() * .1 }); veStkUI(); if ($('#veVid').paused) veDraw(); });
+  $('#veStkList').addEventListener('click', e => { const b = e.target.closest('[data-sd]'); if (!b) return; VE.stickers.splice(+b.dataset.sd, 1); veStkUI(); if ($('#veVid').paused) veDraw(); });
+  veDecoUI();
+  if (document.fonts && document.fonts.load) for (const f of ['400 80px "Black Han Sans"', '400 80px "Jua"', '400 80px "Do Hyeon"', '900 80px "Noto Sans KR"', '700 80px "Noto Sans KR"']) document.fonts.load(f).catch(() => { });
+})();
+
+</script>
+</body>
+</html>
